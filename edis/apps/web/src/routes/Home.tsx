@@ -10,12 +10,14 @@ const LAST_GEO_KEY = 'edis:last-geo';
 
 type StoredState = {
   country: string;
-  geo: GeoContext;
+  geo?: GeoContext;
+  rssUrl?: string;
 };
 
 const Home = () => {
   const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
+  const [rssUrl, setRssUrl] = useState('');
 
   useEffect(() => {
     try {
@@ -25,8 +27,9 @@ const Home = () => {
       if (parsed.country) {
         setCountry(parsed.country);
       }
-      if (parsed.geo) {
-        setSelectedGeo(parsed.geo);
+      setSelectedGeo(parsed.geo ?? null);
+      if (parsed.rssUrl) {
+        setRssUrl(parsed.rssUrl);
       }
     } catch (error) {
       console.error('Failed to read stored location', error);
@@ -34,21 +37,30 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedGeo) return;
     try {
-      const payload: StoredState = { country, geo: selectedGeo };
+      if (!selectedGeo && !rssUrl) {
+        localStorage.removeItem(LAST_GEO_KEY);
+        return;
+      }
+      const payload: StoredState = { country };
+      if (selectedGeo) {
+        payload.geo = selectedGeo;
+      }
+      if (rssUrl) {
+        payload.rssUrl = rssUrl;
+      }
       localStorage.setItem(LAST_GEO_KEY, JSON.stringify(payload));
     } catch (error) {
       console.error('Failed to persist location', error);
       toast.error('Unable to save your last location.');
     }
-  }, [selectedGeo, country]);
+  }, [selectedGeo, country, rssUrl]);
 
   const composedNewsQuery = useMemo(() => {
-    if (!selectedGeo) return '';
+    if (!selectedGeo || rssUrl) return '';
     const segments = [selectedGeo.city, selectedGeo.admin1, selectedGeo.country];
     return segments.filter(Boolean).join(', ');
-  }, [selectedGeo]);
+  }, [selectedGeo, rssUrl]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -92,13 +104,44 @@ const Home = () => {
             <div className="w-full lg:flex-1">
               <LocationSearch country={country} onSelect={setSelectedGeo} />
             </div>
+            <div className="w-full lg:flex-1">
+              <label
+                className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300"
+                htmlFor="rss-url"
+              >
+                Custom RSS feed (optional)
+              </label>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  id="rss-url"
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://example.com/feed.xml"
+                  value={rssUrl}
+                  onChange={(event) => setRssUrl(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
+                />
+                {rssUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setRssUrl('')}
+                    className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                When provided, the news card will load stories directly from this feed instead of searching by location.
+              </p>
+            </div>
           </div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-3">
           <WeatherCard geo={selectedGeo} />
           <CrimeCard geo={selectedGeo} country={country} />
-          <NewsCard geo={selectedGeo} query={composedNewsQuery} country={country} />
+          <NewsCard geo={selectedGeo} query={composedNewsQuery} country={country} rssUrl={rssUrl} />
         </section>
       </main>
     </div>
