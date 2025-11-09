@@ -4,7 +4,32 @@ import { normalizeGeo } from '../../core/normalize';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org';
 
-const buildGeoContext = (item: any): GeoContext => {
+type OsmAddress = {
+  country?: string;
+  country_code?: string;
+  state?: string;
+  county?: string;
+  state_district?: string;
+  region?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  hamlet?: string;
+  municipality?: string;
+};
+
+type OsmBoundingBox = [string, string, string, string];
+
+type OsmSearchResult = {
+  display_name: string;
+  lat: string;
+  lon: string;
+  type?: string;
+  boundingbox?: OsmBoundingBox;
+  address?: OsmAddress;
+};
+
+const buildGeoContext = (item: OsmSearchResult): GeoContext => {
   const address = item.address ?? {};
   return normalizeGeo({
     displayName: item.display_name,
@@ -37,7 +62,7 @@ export const search = async ({ query, country, scope, limit = 5 }: SearchOptions
     countrycodes: country?.toLowerCase(),
     dedupe: 1
   });
-  const results = await fetchJson<any[]>(`${BASE_URL}/search?${params}`, {
+  const results = await fetchJson<OsmSearchResult[]>(`${BASE_URL}/search?${params}`, {
     headers: {
       'User-Agent': 'EDIS/1.0 (https://example.com)',
       Accept: 'application/json'
@@ -45,13 +70,14 @@ export const search = async ({ query, country, scope, limit = 5 }: SearchOptions
   });
   return results
     .filter((item) => {
+      const type = item.type ?? '';
       if (scope === 'country') {
-        return item.type === 'country';
+        return type === 'country';
       }
       if (scope === 'admin') {
-        return ['state', 'county'].includes(item.type);
+        return ['state', 'county'].includes(type);
       }
-      return ['city', 'town', 'village', 'hamlet', 'municipality'].includes(item.type) || !scope;
+      return ['city', 'town', 'village', 'hamlet', 'municipality'].includes(type) || !scope;
     })
     .map(buildGeoContext);
 };
@@ -68,7 +94,7 @@ export const reverse = async ({ lat, lon }: ReverseOptions) => {
     format: 'jsonv2',
     addressdetails: 1
   });
-  const payload = await fetchJson<any>(`${BASE_URL}/reverse?${params}`, {
+  const payload = await fetchJson<OsmSearchResult | null>(`${BASE_URL}/reverse?${params}`, {
     headers: {
       'User-Agent': 'EDIS/1.0 (https://example.com)',
       Accept: 'application/json'
