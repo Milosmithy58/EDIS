@@ -5,18 +5,36 @@ import { flags } from '../core/env';
 import { NewsDTO } from '../core/types';
 import * as gnews from '../adapters/news/gnews';
 import * as newsapi from '../adapters/news/newsapi';
+import * as rss from '../adapters/news/rss';
 
 const cache = new LRUCache<string, NewsDTO>({ max: 200, ttl: 1000 * 60 * 5 });
 
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const { query, country } = req.query as Record<string, string>;
-  if (!query) {
-    res.status(400).json({ message: 'query is required', status: 400 });
+  const { query, country, rssUrl: rawRssUrl } = req.query as Record<string, string | undefined>;
+  const rssUrl = rawRssUrl?.trim();
+  if (!query && !rssUrl) {
+    res.status(400).json({ message: 'query or rssUrl is required', status: 400 });
     return;
   }
-  const cacheKey = JSON.stringify({ query, country, provider: flags.newsApi ? 'newsapi' : 'gnews' });
+
+  if (rssUrl) {
+    try {
+      // eslint-disable-next-line no-new
+      new URL(rssUrl);
+    } catch (error) {
+      res.status(400).json({ message: 'rssUrl must be a valid URL', status: 400 });
+      return;
+    }
+  }
+
+  const cacheKey = JSON.stringify({
+    query,
+    country,
+    rssUrl,
+    provider: rssUrl ? 'rss' : flags.newsApi ? 'newsapi' : 'gnews'
+  });
   if (cache.has(cacheKey)) {
     const cached = cache.get(cacheKey)!;
     const body = JSON.stringify(cached);
@@ -30,9 +48,11 @@ router.get('/', async (req, res) => {
     return;
   }
   try {
-    const payload = flags.newsApi
-      ? await newsapi.getNews(query, country)
-      : await gnews.getNews(query, country);
+    const payload = rssUrl
+      ? await rss.getNewsFromFeed(rssUrl)
+      : flags.newsApi
+      ? await newsapi.getNews(query!, country)
+      : await gnews.getNews(query!, country);
     cache.set(cacheKey, payload);
     const body = JSON.stringify(payload);
     const tag = etag(body);

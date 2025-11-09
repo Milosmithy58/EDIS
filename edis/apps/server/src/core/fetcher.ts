@@ -13,6 +13,15 @@ export const fetchJson = async <T>(input: string | URL, init?: RequestInit): Pro
   return response.json() as Promise<T>;
 };
 
+export const fetchText = async (input: string | URL, init?: RequestInit): Promise<string> => {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Request failed: ${response.status} ${text}`);
+  }
+  return response.text();
+};
+
 export const toQueryString = (params: Record<string, string | number | undefined | null>) => {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
