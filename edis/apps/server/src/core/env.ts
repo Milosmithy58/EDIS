@@ -1,4 +1,38 @@
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
 import { z } from 'zod';
+
+const envCandidates = [resolve(process.cwd(), '.env'), resolve(__dirname, '../../../.env')];
+
+for (const envPath of envCandidates) {
+  if (!existsSync(envPath)) {
+    continue;
+  }
+
+  const envFile = readFileSync(envPath, 'utf-8');
+
+  for (const line of envFile.split(/\r?\n/)) {
+    const trimmed = line.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const [key, ...valueParts] = trimmed.split('=');
+
+    if (!key) {
+      continue;
+    }
+
+    const value = valueParts.join('=').replace(/^['"]|['"]$/g, '');
+
+    if (value && process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+
+  break;
+}
 
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(4000),
