@@ -1,0 +1,21 @@
+{
+  "name": "edis-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/server"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @edis/web",
+    "dev:server": "npm run dev --workspace @edis/server",
+    "dev:all": "concurrently \"npm run dev:web\" \"npm run dev:server\"",
+    "build": "npm run build --workspace @edis/web && npm run build --workspace @edis/server",
+    "lint": "npm run lint --workspace @edis/web && npm run lint --workspace @edis/server",
+    "format": "prettier --write .",
+    "test": "npm run test --workspace @edis/web && npm run test --workspace @edis/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.5"
+  }
+}
