@@ -5,6 +5,24 @@ import { normalizeGeo } from '../../core/normalize';
 
 const BASE_URL = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
 
+type MapboxContext = {
+  id: string;
+  text: string;
+  short_code?: string;
+};
+
+type MapboxFeature = {
+  place_name: string;
+  text: string;
+  center: [number, number];
+  bbox?: [number, number, number, number];
+  context?: MapboxContext[];
+};
+
+type MapboxResponse = {
+  features?: MapboxFeature[];
+};
+
 export const search = async (query: string, country?: string, limit = 5): Promise<GeoContext[]> => {
   if (!env.MAPBOX_TOKEN) {
     throw new Error('MAPBOX_TOKEN is required for Mapbox geocoding');
@@ -14,12 +32,12 @@ export const search = async (query: string, country?: string, limit = 5): Promis
     limit,
     country
   });
-  const response = await fetchJson<any>(`${BASE_URL}/${encodeURIComponent(query)}.json?${params}`);
-  return (response.features ?? []).map((feature: any) => {
-    const context = feature.context || [];
-    const countryCtx = context.find((c: any) => c.id.startsWith('country'));
-    const regionCtx = context.find((c: any) => c.id.startsWith('region'));
-    const placeCtx = context.find((c: any) => c.id.startsWith('place'));
+  const response = await fetchJson<MapboxResponse>(`${BASE_URL}/${encodeURIComponent(query)}.json?${params}`);
+  return (response.features ?? []).map((feature) => {
+    const context = feature.context ?? [];
+    const countryCtx = context.find((item) => item.id.startsWith('country'));
+    const regionCtx = context.find((item) => item.id.startsWith('region'));
+    const placeCtx = context.find((item) => item.id.startsWith('place'));
     return normalizeGeo({
       displayName: feature.place_name,
       country: countryCtx?.text ?? feature.place_name,

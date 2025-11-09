@@ -46,7 +46,8 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/crime', crimeRouter);
 app.use('/api/news', newsRouter);
 
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  void _next;
   logger.error({ err }, 'Unhandled error');
   res.status(500).json({ message: 'Internal server error', status: 500 });
 });

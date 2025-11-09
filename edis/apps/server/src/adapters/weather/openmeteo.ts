@@ -36,12 +36,24 @@ export const getWeather = async (lat: number, lon: number): Promise<WeatherDTO> 
   const params = toQueryString({
     latitude: lat,
     longitude: lon,
-    current_weather: true,
+    current_weather: 'true',
     hourly: 'temperature_2m,precipitation,wind_speed_10m',
     daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,weathercode',
     timezone: 'auto'
   });
-  const payload = await fetchJson<any>(`https://api.open-meteo.com/v1/forecast?${params}`);
+  const payload = await fetchJson<{
+    current_weather?: { temperature?: number; windspeed?: number; weathercode?: number };
+    current_weather_units?: { windspeed?: string };
+    hourly?: { time?: string[]; temperature_2m?: number[]; precipitation?: number[]; wind_speed_10m?: number[] };
+    hourly_units?: { wind_speed_10m?: string };
+    daily?: {
+      time?: string[];
+      temperature_2m_max?: number[];
+      temperature_2m_min?: number[];
+      precipitation_sum?: number[];
+      weathercode?: number[];
+    };
+  }>(`https://api.open-meteo.com/v1/forecast?${params}`);
   const hourlyTimes: string[] = payload.hourly?.time ?? [];
   const hourlyTemps: number[] = payload.hourly?.temperature_2m ?? [];
   const hourlyPrecip: number[] = payload.hourly?.precipitation ?? [];

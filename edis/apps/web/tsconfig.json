@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "types": ["vite/client", "vitest/globals"],
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "baseUrl": "./src",
+    "noEmit": true,
     "paths": {
       "@/lib/*": ["lib/*"],
       "@/components/*": ["components/*"],
