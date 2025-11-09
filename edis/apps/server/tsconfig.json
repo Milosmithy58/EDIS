@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "moduleResolution": "Node",
-    "module": "ESNext",
+    "module": "CommonJS",
     "declaration": true,
     "sourceMap": true
   },
