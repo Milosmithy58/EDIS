@@ -17,7 +17,7 @@ const decodeEntities = (value: string): string =>
     .replace(/&apos;/gi, "'");
 
 const extractTagValue = (source: string, tagName: string): string | undefined => {
-  const regex = new RegExp(`<${tagName}(?:[^>]*)>([\\s\\S]*?)<\/${tagName}>`, 'i');
+  const regex = new RegExp(`<${tagName}(?:[^>]*)>([\\s\\S]*?)</${tagName}>`, 'i');
   const match = source.match(regex);
   if (!match) return undefined;
   return decodeEntities(match[1]).trim();
