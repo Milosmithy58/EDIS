@@ -65,7 +65,21 @@ export type NewsDTO = {
 };
 
 export type ErrorDTO = {
+  code?: string;
   message: string;
+  source?: string;
   status: number;
   retryable?: boolean;
+};
+
+export type FemaDisasterDTO = {
+  disasterNumber: number;
+  declarationType: 'DR' | 'EM' | 'FM' | string;
+  state: string;
+  county: string | null;
+  title: string | null;
+  incidentBeginDate: string | null;
+  incidentEndDate: string | null;
+  declarationDate: string | null;
+  placeCodes?: string[];
 };
