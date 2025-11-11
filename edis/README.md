@@ -66,6 +66,14 @@ npm run lint     # ESLint across frontend and backend
 npm run format   # Prettier on the full repo
 ```
 
+### Dependency funding notices
+
+Running `npm fund` prints a long list of third-party packages along with the
+maintainers' sponsorship URLs. This is an informational report from npm—it does
+not indicate an error or a missing dependency. You can safely ignore the
+output, or follow the provided links if you want to sponsor the upstream
+projects.
+
 ## Architecture overview
 
 ```
