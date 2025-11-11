@@ -72,6 +72,25 @@ export type ErrorDTO = {
   retryable?: boolean;
 };
 
+export type TicketDTO = {
+  id: string;
+  source: {
+    id: string;
+    name: string;
+    url: string;
+  };
+  title: string;
+  description?: string;
+  category: 'Transport' | 'Utilities' | 'Council' | 'Police' | 'Health' | 'Weather' | 'Other';
+  severity?: 'info' | 'minor' | 'moderate' | 'major' | 'critical';
+  status?: 'open' | 'ongoing' | 'resolved' | 'planned';
+  startedAt?: string;
+  updatedAt?: string;
+  location?: { name?: string; lat?: number; lon?: number };
+  areaTags?: string[];
+  url: string;
+};
+
 export type FemaDisasterDTO = {
   disasterNumber: number;
   declarationType: 'DR' | 'EM' | 'FM' | string;
