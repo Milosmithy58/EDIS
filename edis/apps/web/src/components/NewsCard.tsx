@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { GeoContext } from './LocationSearch';
 import { formatDateTime } from '../lib/format';
+import { normalizeFilters, serializeFilters } from '../lib/newsFilters';
 
 type NewsDTO = {
   items: Array<{
@@ -19,9 +20,11 @@ type Props = {
   query: string;
   country: string;
   rssUrl: string;
+  filters: string[];
+  onClearFilters: () => void;
 };
 
-const NewsCard = ({ geo, query, country, rssUrl }: Props) => {
+const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters }: Props) => {
   const trimmedRssUrl = rssUrl.trim();
   const hasCustomFeed = Boolean(trimmedRssUrl);
   const isValidFeed = hasCustomFeed
@@ -35,13 +38,16 @@ const NewsCard = ({ geo, query, country, rssUrl }: Props) => {
         }
       })()
     : false;
+  const normalizedFilters = normalizeFilters(filters);
+  const serializedFilters = serializeFilters(filters);
+  const hasFilters = normalizedFilters.length > 0;
   const {
     data,
     isFetching,
     isError,
     refetch
   } = useQuery<NewsDTO>({
-    queryKey: ['news', query, country, trimmedRssUrl],
+    queryKey: ['news', query, country, trimmedRssUrl, serializedFilters],
     enabled: (hasCustomFeed && isValidFeed) || (Boolean(query) && Boolean(geo)),
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -51,6 +57,9 @@ const NewsCard = ({ geo, query, country, rssUrl }: Props) => {
         params.set('query', query);
         if (country) {
           params.set('country', country);
+        }
+        if (hasFilters) {
+          params.set('filters', JSON.stringify(normalizedFilters));
         }
       }
       const response = await fetch(`/api/news?${params.toString()}`);
@@ -101,6 +110,20 @@ const NewsCard = ({ geo, query, country, rssUrl }: Props) => {
       )}
       {((hasCustomFeed && isValidFeed) || (geo && query)) && data && (
         <div className="flex flex-1 flex-col gap-3 text-sm">
+          {!hasCustomFeed && hasFilters && (
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+              <span>
+                Filtered by: {normalizedFilters.join(', ')}
+              </span>
+              <button
+                type="button"
+                onClick={onClearFilters}
+                className="font-medium text-sky-600 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+              >
+                Clear all filters
+              </button>
+            </div>
+          )}
           <p className="text-xs text-slate-500">
             Showing {Math.min(data.items.length, 10)} of {data.total} stories from {data.source}
           </p>

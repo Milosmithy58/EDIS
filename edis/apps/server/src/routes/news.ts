@@ -6,13 +6,14 @@ import { NewsDTO } from '../core/types';
 import * as gnews from '../adapters/news/gnews';
 import * as newsapi from '../adapters/news/newsapi';
 import * as rss from '../adapters/news/rss';
+import { buildFilterQuery, normalizeFilters, serializeFilters } from '../adapters/news/filterKeywords';
 
 const cache = new LRUCache<string, NewsDTO>({ max: 200, ttl: 1000 * 60 * 5 });
 
 const router = Router();
 
 router.get('/', async (req, res) => {
-  const { query, country, rssUrl: rawRssUrl } = req.query as Record<string, string | undefined>;
+  const { query, country, rssUrl: rawRssUrl, filters: rawFilters } = req.query as Record<string, string | undefined>;
   const rssUrl = rawRssUrl?.trim();
   if (!query && !rssUrl) {
     res.status(400).json({ message: 'query or rssUrl is required', status: 400 });
@@ -29,10 +30,25 @@ router.get('/', async (req, res) => {
     }
   }
 
+  let parsedFilters: unknown = [];
+  if (rawFilters) {
+    try {
+      parsedFilters = JSON.parse(rawFilters);
+    } catch (error) {
+      console.warn('Unable to parse filters payload', error);
+      parsedFilters = [];
+    }
+  }
+
+  const normalizedFilters = normalizeFilters(parsedFilters);
+  const filtersKey = serializeFilters(normalizedFilters);
+  const providerQuery = rssUrl ? undefined : buildFilterQuery(query!, normalizedFilters);
+
   const cacheKey = JSON.stringify({
-    query,
+    query: providerQuery ?? query,
     country,
     rssUrl,
+    filters: filtersKey,
     provider: rssUrl ? 'rss' : flags.newsApi ? 'newsapi' : 'gnews'
   });
   if (cache.has(cacheKey)) {
@@ -51,8 +67,8 @@ router.get('/', async (req, res) => {
     const payload = rssUrl
       ? await rss.getNewsFromFeed(rssUrl)
       : flags.newsApi
-      ? await newsapi.getNews(query!, country)
-      : await gnews.getNews(query!, country);
+      ? await newsapi.getNews(providerQuery!, country)
+      : await gnews.getNews(providerQuery!, country);
     cache.set(cacheKey, payload);
     const body = JSON.stringify(payload);
     const tag = etag(body);
