@@ -8,6 +8,7 @@ import weatherRouter from './routes/weather';
 import crimeRouter from './routes/crime';
 import newsRouter from './routes/news';
 import adminRouter from './routes/admin';
+import femaRouter from './routes/fema';
 import { env } from './core/env';
 
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
@@ -55,6 +56,7 @@ app.use('/api/weather', weatherRouter);
 app.use('/api/crime', crimeRouter);
 app.use('/api/news', newsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/fema', femaRouter);
 
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   void _next;

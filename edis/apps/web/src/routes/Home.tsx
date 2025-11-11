@@ -4,9 +4,11 @@ import LocationSearch, { GeoContext } from '../components/LocationSearch';
 import WeatherCard from '../components/WeatherCard';
 import CrimeCard from '../components/CrimeCard';
 import NewsCard from '../components/NewsCard';
+import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import { COUNTRY_OPTIONS, getDefaultCountry } from '../lib/country';
 import FilterPanel from '../components/FilterPanel';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
+import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
 
 const LAST_GEO_KEY = 'edis:last-geo';
@@ -103,6 +105,31 @@ const Home = ({ adminNav }: HomeProps) => {
   const handleFiltersChange = (next: string[]) => {
     setSelectedFilters(normalizeFilters(next));
   };
+
+  const femaStateCode = useMemo(() => {
+    if (!selectedGeo) return null;
+    const countryCode = selectedGeo.countryCode?.toUpperCase();
+    if (countryCode !== 'US' && countryCode !== 'USA') {
+      return null;
+    }
+    return resolveUsStateCode(selectedGeo.admin1);
+  }, [selectedGeo]);
+
+  const femaCounty = useMemo(() => {
+    if (!selectedGeo) return undefined;
+    if (!femaStateCode) return undefined;
+    const candidates = [selectedGeo.admin2, selectedGeo.admin1].filter(Boolean) as string[];
+    for (const value of candidates) {
+      const trimmed = value.trim();
+      if (!trimmed) continue;
+      const lower = trimmed.toLowerCase();
+      if (lower.includes('county') || lower.includes('parish') || lower.includes('borough') || lower.includes('census area') || lower.includes('municipio')) {
+        return trimmed;
+      }
+    }
+    const fallback = selectedGeo.admin2?.trim();
+    return fallback && fallback.length > 0 ? fallback : undefined;
+  }, [selectedGeo, femaStateCode]);
 
   const handleClearFilters = () => {
     setSelectedFilters([]);
@@ -202,6 +229,7 @@ const Home = ({ adminNav }: HomeProps) => {
                   filters={debouncedFilters}
                   onClearFilters={handleClearFilters}
                 />
+                <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
               </div>
             </section>
           </div>
