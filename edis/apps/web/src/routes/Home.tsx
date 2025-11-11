@@ -16,7 +16,6 @@ const LAST_GEO_KEY = 'edis:last-geo';
 type StoredState = {
   country: string;
   geo?: GeoContext;
-  rssUrl?: string;
 };
 
 type HomeProps = {
@@ -26,7 +25,6 @@ type HomeProps = {
 const Home = ({ adminNav }: HomeProps) => {
   const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
-  const [rssUrl, setRssUrl] = useState('');
   const [selectedFilters, setSelectedFilters] = useState<string[]>(DEFAULT_FILTERS);
 
   useEffect(() => {
@@ -38,9 +36,6 @@ const Home = ({ adminNav }: HomeProps) => {
         setCountry(parsed.country);
       }
       setSelectedGeo(parsed.geo ?? null);
-      if (parsed.rssUrl) {
-        setRssUrl(parsed.rssUrl);
-      }
     } catch (error) {
       console.error('Failed to read stored location', error);
     }
@@ -63,7 +58,7 @@ const Home = ({ adminNav }: HomeProps) => {
 
   useEffect(() => {
     try {
-      if (!selectedGeo && !rssUrl) {
+      if (!selectedGeo) {
         localStorage.removeItem(LAST_GEO_KEY);
         return;
       }
@@ -71,15 +66,12 @@ const Home = ({ adminNav }: HomeProps) => {
       if (selectedGeo) {
         payload.geo = selectedGeo;
       }
-      if (rssUrl) {
-        payload.rssUrl = rssUrl;
-      }
       localStorage.setItem(LAST_GEO_KEY, JSON.stringify(payload));
     } catch (error) {
       console.error('Failed to persist location', error);
       toast.error('Unable to save your last location.');
     }
-  }, [selectedGeo, country, rssUrl]);
+  }, [selectedGeo, country]);
 
   useEffect(() => {
     try {
@@ -95,10 +87,10 @@ const Home = ({ adminNav }: HomeProps) => {
   }, [selectedFilters]);
 
   const composedNewsQuery = useMemo(() => {
-    if (!selectedGeo || rssUrl) return '';
+    if (!selectedGeo) return '';
     const segments = [selectedGeo.city, selectedGeo.admin1, selectedGeo.country];
     return segments.filter(Boolean).join(', ');
-  }, [selectedGeo, rssUrl]);
+  }, [selectedGeo]);
 
   const debouncedFilters = useDebounce(selectedFilters, 300);
 
@@ -160,7 +152,7 @@ const Home = ({ adminNav }: HomeProps) => {
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
             Search by town, city, county, or state. Results power the weather, crime, and news cards below.
           </p>
-          <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="mt-4 flex flex-col gap-4">
             <div className="w-full lg:w-1/4">
               <label
                 className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300"
@@ -181,39 +173,8 @@ const Home = ({ adminNav }: HomeProps) => {
                 ))}
               </select>
             </div>
-            <div className="w-full lg:flex-1">
+            <div className="w-full">
               <LocationSearch country={country} onSelect={setSelectedGeo} />
-            </div>
-            <div className="w-full lg:flex-1">
-              <label
-                className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300"
-                htmlFor="rss-url"
-              >
-                Custom RSS feed (optional)
-              </label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <input
-                  id="rss-url"
-                  type="url"
-                  inputMode="url"
-                  placeholder="https://example.com/feed.xml"
-                  value={rssUrl}
-                  onChange={(event) => setRssUrl(event.target.value)}
-                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
-                />
-                {rssUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setRssUrl('')}
-                    className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                When provided, the news card will load stories directly from this feed instead of searching by location.
-              </p>
             </div>
           </div>
         </section>
@@ -229,7 +190,6 @@ const Home = ({ adminNav }: HomeProps) => {
                   geo={selectedGeo}
                   query={composedNewsQuery}
                   country={country}
-                  rssUrl={rssUrl}
                   filters={debouncedFilters}
                   onClearFilters={handleClearFilters}
                   onRemoveFilter={handleRemoveFilter}
