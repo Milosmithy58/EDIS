@@ -9,6 +9,60 @@ A monorepo MVP that combines geocoding, weather, crime, and news data into a sin
 - Node.js 20+
 - npm 9+
 
+#### Installing Node.js, npm, and Homebrew
+
+If your machine does not already have Node.js/npm, install them before running the steps below. Node.js bundles npm by default.
+
+**macOS**
+
+1. Download and run the **LTS** macOS installer from [nodejs.org](https://nodejs.org/en/download).
+2. Or install [Homebrew](https://brew.sh/) (if not installed) using:
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
+3. Once Homebrew is available, install Node.js (with npm):
+   ```bash
+   brew install node@20
+   ```
+4. Verify:
+   ```bash
+   node -v
+   npm -v
+   ```
+
+**Windows**
+
+1. Install the **LTS** Windows installer from [nodejs.org](https://nodejs.org/en/download) and follow the setup wizard.
+2. Optionally use winget in an elevated PowerShell prompt:
+   ```powershell
+   winget install --id OpenJS.NodeJS.LTS -e
+   ```
+3. Confirm the install:
+   ```powershell
+   node -v
+   npm -v
+   ```
+
+**Linux (Debian/Ubuntu)**
+
+1. Add the NodeSource repo and install Node.js (includes npm):
+   ```bash
+   sudo apt-get update && sudo apt-get install -y curl
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
+2. Verify:
+   ```bash
+   node -v
+   npm -v
+   ```
+3. Optional: install Homebrew on Linux for an alternate workflow:
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.profile
+   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+   ```
+
 ### Installation
 
 ```bash
