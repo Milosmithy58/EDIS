@@ -30,6 +30,12 @@ export type WeatherDTO = {
     precipMm: number;
     summary: string;
   }>;
+  meta?: {
+    source: string;
+    sourceLabel?: string;
+    url?: string;
+    updatedISO?: string;
+  };
 };
 
 export type CrimeDTO = {

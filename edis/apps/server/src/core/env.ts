@@ -44,12 +44,15 @@ const EnvSchema = z.object({
   FBI_CRIME_API_KEY: z.string().optional(),
   DEFAULT_COUNTRY: z.string().default('UK'),
   ENABLE_OPENWEATHER: z.string().optional(),
-  ENABLE_NEWSAPI: z.string().optional()
+  ENABLE_NEWSAPI: z.string().optional(),
+  VISUALCROSSING_API_KEY: z.string().optional(),
+  WEATHER_PROVIDER: z.enum(['visualcrossing', 'openweather', 'openmeteo']).default('visualcrossing')
 });
 
 export const env = EnvSchema.parse(process.env);
 
 export const flags = {
   openWeather: env.ENABLE_OPENWEATHER === 'true' && Boolean(env.OPENWEATHER_API_KEY),
-  newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY)
+  newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY),
+  weatherProvider: env.WEATHER_PROVIDER
 };
