@@ -14,6 +14,7 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
   const normalizedSelected = normalizeFilters(selected);
   const selectedSet = new Set<NewsFilterLabel>(normalizedSelected);
   const hasSelection = normalizedSelected.length > 0;
+  const hasAllSelected = normalizedSelected.length === FILTER_LABELS.length;
 
   const handleToggle = (label: NewsFilterLabel) => {
     if (selectedSet.has(label)) {
@@ -32,6 +33,10 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
     onChange([...DEFAULT_FILTERS]);
   };
 
+  const handleSelectAll = () => {
+    onChange(normalizeFilters(FILTER_LABELS));
+  };
+
   return (
     <aside
       className={clsx(
@@ -40,21 +45,31 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
       )}
       aria-label="Filter news topics"
     >
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">Filter news topics</h2>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             Choose the safety signals you want highlighted in the news feed.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleClearAll}
-          className="text-xs font-medium text-sky-600 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
-          disabled={!hasSelection}
-        >
-          Clear all
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleSelectAll}
+            className="text-xs font-medium text-sky-600 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            disabled={hasAllSelected}
+          >
+            Select all
+          </button>
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="text-xs font-medium text-sky-600 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+            disabled={!hasSelection}
+          >
+            Clear all
+          </button>
+        </div>
       </header>
       <div className="space-y-6" role="group" aria-label="News filter groups">
         {Object.entries(FILTER_GROUPS).map(([groupLabel, labels]) => (
