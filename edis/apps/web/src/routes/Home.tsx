@@ -4,6 +4,7 @@ import LocationSearch, { GeoContext } from '../components/LocationSearch';
 import LocationMap from '../components/LocationMap';
 import WeatherCard from '../components/WeatherCard';
 import CrimeCard from '../components/CrimeCard';
+import CrimeNewsCard from '../components/CrimeNewsCard';
 import NewsCard from '../components/NewsCard';
 import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import LocalTicketsCard from '../components/LocalTicketsCard';
@@ -239,6 +240,7 @@ const Home = ({ adminNav }: HomeProps) => {
                 onClearFilters={handleClearFilters}
                 onRemoveFilter={handleRemoveFilter}
               />
+              <CrimeNewsCard location={selectedGeo ? composedNewsQuery : ''} />
               <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
               <LocalTicketsCard geo={selectedGeo} />
             </div>
