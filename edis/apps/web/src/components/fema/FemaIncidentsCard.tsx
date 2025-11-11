@@ -273,7 +273,7 @@ const FemaIncidentsCard = ({ state, county }: Props) => {
       )}
       {shouldShowContent && items.length > 0 && (
         <div className="flex flex-1 flex-col">
-          <ul className="flex-1 space-y-3 overflow-auto pr-1" role="list">
+          <ul className="flex-1 space-y-3 overflow-auto pr-1">
             {items.map((item) => (
               <li
                 key={`${item.disasterNumber}-${item.declarationDate ?? 'unknown'}`}
