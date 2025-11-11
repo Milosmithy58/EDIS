@@ -34,9 +34,18 @@ for (const envPath of envCandidates) {
   break;
 }
 
+if (process.env.NODE_ENV === 'test') {
+  process.env.ADMIN_TOKEN ??= 'test-admin-token';
+  process.env.SECRETBOX_KEY ??= Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');
+  process.env.KEYS_STORE_PATH ??= './secrets/test-keys.enc';
+}
+
 const EnvSchema = z.object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  ADMIN_TOKEN: z.string().min(12, 'ADMIN_TOKEN must be set and at least 12 characters long'),
+  SECRETBOX_KEY: z.string().min(1, 'SECRETBOX_KEY must be a base64-encoded 32-byte key'),
+  KEYS_STORE_PATH: z.string().default('./secrets/keys.enc'),
   GNEWS_API_KEY: z.string().optional(),
   NEWSAPI_API_KEY: z.string().optional(),
   OPENWEATHER_API_KEY: z.string().optional(),
@@ -46,14 +55,16 @@ const EnvSchema = z.object({
   ENABLE_OPENWEATHER: z.string().optional(),
   ENABLE_NEWSAPI: z.string().optional(),
   NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('gnews'),
-  WEBZIO_TOKEN: z.string().optional()
+  WEATHER_PROVIDER: z.enum(['visualcrossing', 'openmeteo', 'openweather']).optional(),
+  WEBZIO_TOKEN: z.string().optional(),
+  VISUALCROSSING_API_KEY: z.string().optional()
 });
 
 export const env = EnvSchema.parse(process.env);
 
 export const flags = {
   openWeather: env.ENABLE_OPENWEATHER === 'true' && Boolean(env.OPENWEATHER_API_KEY),
-  newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY),
+  newsApi: env.ENABLE_NEWSAPI === 'true',
   weatherProvider: env.WEATHER_PROVIDER
 };
 

@@ -44,6 +44,21 @@ Keys are optional unless you enable the related adapters. The defaults (Open-Met
 
 > ⚠️ Never commit your `.env` file. Secrets stay local or move into secret managers.
 
+## Managing API Keys Securely (Dev & Wix)
+
+### Local development
+
+- Populate `.env` with a strong `ADMIN_TOKEN`, a 32-byte base64 `SECRETBOX_KEY`, and the desired `KEYS_STORE_PATH` (defaults to `./secrets/keys.enc`).
+- Start the stack with `npm run dev:all`, then visit `http://localhost:5173/admin-login` and enter the admin token. The in-memory session unlocks the **Admin → API Keys** screen.
+- Use the write-only form to rotate provider credentials. Keys are encrypted with AES-256-GCM and stored at `KEYS_STORE_PATH`; the raw secrets never appear in responses or logs.
+- Existing adapters (Visual Crossing, NewsAPI, GNews) pull credentials from the secure store at runtime. If the store is empty on first run, any values from `.env` seed the encrypted file.
+
+### Wix (Velo)
+
+- Create `backend/edis/keys.jsw` with server-side methods to `setKey` and `testKey`, validating the same admin token before updating Wix Secrets Manager entries (`VC_KEY`, `NEWSAPI_KEY`, `GNEWS_KEY`).
+- Call those backend functions from the Wix admin UI; never surface stored secrets in the browser.
+- Provider fetchers on Wix should resolve credentials from the secrets manager at call time so live traffic never depends on client-supplied keys.
+
 ### Webz.io setup
 
 - Endpoint: `https://api.webz.io/newsApiLite` with `token`, `q`, optional `ts`, and pagination via the `'next'` URL.

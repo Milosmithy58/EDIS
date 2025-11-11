@@ -25,7 +25,7 @@ describe('visual crossing adapter', () => {
     };
     const loc = buildLocationString(geo);
     expect(loc).toBe('London,England,UK');
-    const url = buildUrl({ loc, units: 'metric' });
+    const url = buildUrl({ loc, units: 'metric', apiKey: 'test-key' });
     expect(url).toBe(
       'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/London,England,UK?unitGroup=metric&include=current,hours,days,alerts&lang=en&key=test-key'
     );
@@ -44,7 +44,7 @@ describe('visual crossing adapter', () => {
     };
     const loc = buildLocationString(geo);
     expect(loc).toBe('51.5074,-0.1278');
-    const url = buildUrl({ loc, units: 'metric' });
+    const url = buildUrl({ loc, units: 'metric', apiKey: 'test-key' });
     expect(url).toBe(
       'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/51.5074,-0.1278?unitGroup=metric&include=current,hours,days,alerts&lang=en&key=test-key'
     );

@@ -7,6 +7,7 @@ import geocodeRouter from './routes/geocode';
 import weatherRouter from './routes/weather';
 import crimeRouter from './routes/crime';
 import newsRouter from './routes/news';
+import adminRouter from './routes/admin';
 import { env } from './core/env';
 
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
@@ -20,6 +21,8 @@ app.use(
     maxAge: 600
   })
 );
+
+app.use(express.json({ limit: '16kb' }));
 
 app.use(
   rateLimit({
@@ -45,6 +48,7 @@ app.use('/api/geocode', geocodeRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/crime', crimeRouter);
 app.use('/api/news', newsRouter);
+app.use('/api/admin', adminRouter);
 
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   void _next;
