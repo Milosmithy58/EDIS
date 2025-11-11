@@ -3,7 +3,8 @@ import { getKey } from '../../core/secrets/secureStore';
 import { fetchJson, toQueryString } from '../../core/fetcher';
 import { NewsDTO } from '../../core/types';
 
-const BASE_URL = 'https://newsapi.org/v2/top-headlines';
+const TOP_HEADLINES_URL = 'https://newsapi.org/v2/top-headlines';
+const EVERYTHING_URL = 'https://newsapi.org/v2/everything';
 
 type NewsApiArticle = {
   title: string;
@@ -25,12 +26,23 @@ export const getNews = async (query: string, country?: string): Promise<NewsDTO>
   if (!apiKey) {
     throw new Error('NEWSAPI_API_KEY missing.');
   }
-  const params = toQueryString({
-    q: query,
-    country: country?.toLowerCase(),
-    pageSize: 10
-  });
-  const payload = await fetchJson<NewsApiResponse>(`${BASE_URL}?${params}`, {
+  const trimmedQuery = query.trim();
+  const normalizedCountry = country?.trim().toLowerCase();
+  const usingTopHeadlines = Boolean(normalizedCountry);
+  const params = usingTopHeadlines
+    ? toQueryString({
+        q: trimmedQuery,
+        country: normalizedCountry,
+        pageSize: 10
+      })
+    : toQueryString({
+        q: trimmedQuery,
+        language: 'en',
+        sortBy: 'publishedAt',
+        pageSize: 10
+      });
+  const url = `${usingTopHeadlines ? TOP_HEADLINES_URL : EVERYTHING_URL}?${params}`;
+  const payload = await fetchJson<NewsApiResponse>(url, {
     headers: {
       'X-Api-Key': apiKey
     }
