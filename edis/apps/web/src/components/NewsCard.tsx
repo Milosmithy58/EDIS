@@ -23,26 +23,12 @@ type Props = {
   geo: GeoContext | null;
   query: string;
   country: string;
-  rssUrl: string;
   filters: string[];
   onClearFilters: () => void;
   onRemoveFilter: (label: string) => void;
 };
 
-const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemoveFilter }: Props) => {
-  const trimmedRssUrl = rssUrl.trim();
-  const hasCustomFeed = Boolean(trimmedRssUrl);
-  const isValidFeed = hasCustomFeed
-    ? (() => {
-        try {
-          // eslint-disable-next-line no-new
-          new URL(trimmedRssUrl);
-          return true;
-        } catch (error) {
-          return false;
-        }
-      })()
-    : false;
+const NewsCard = ({ geo, query, country, filters, onClearFilters, onRemoveFilter }: Props) => {
   const normalizedFilters = normalizeFilters(filters);
   const serializedFilters = serializeFilters(filters);
   const hasFilters = normalizedFilters.length > 0;
@@ -65,7 +51,6 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
       'news',
       query,
       countryCode,
-      trimmedRssUrl,
       serializedFilters,
       geo?.lat,
       geo?.lon,
@@ -73,21 +58,8 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
       geo?.admin1,
       ts
     ],
-    enabled: (hasCustomFeed && isValidFeed) || (Boolean(query) && Boolean(geo)),
+    enabled: Boolean(query) && Boolean(geo),
     queryFn: async () => {
-      if (hasCustomFeed) {
-        const params = new URLSearchParams();
-        params.set('rssUrl', trimmedRssUrl);
-        if (typeof ts === 'number') {
-          params.set('ts', String(ts));
-        }
-        const response = await fetch(`/api/news?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error('Failed to load news');
-        }
-        return response.json();
-      }
-
       const payload: { query: string; filters: string[]; country?: string; ts?: number } = {
         query,
         filters: normalizedFilters
@@ -127,7 +99,7 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
     setNextCursor(null);
     setNotice(undefined);
     setLoadMoreError(null);
-  }, [query, serializedFilters, trimmedRssUrl, geo?.lat, geo?.lon, geo?.city, geo?.admin1, countryCode, ts]);
+  }, [query, serializedFilters, geo?.lat, geo?.lon, geo?.city, geo?.admin1, countryCode, ts]);
 
   const totalStories = data?.total ?? results.length;
 
@@ -162,34 +134,19 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
     setTs(undefined);
   };
 
-  const shouldShowContent = (hasCustomFeed && isValidFeed) || (geo && query);
+  const shouldShowContent = Boolean(geo && query);
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
       <header className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">News</h2>
-        {hasCustomFeed ? (
-          <span className="text-xs text-slate-500">
-            {(() => {
-              try {
-                return new URL(trimmedRssUrl).host;
-              } catch (error) {
-                return 'Custom feed';
-              }
-            })()}
-          </span>
-        ) : (
-          geo?.city && <span className="text-xs text-slate-500">{geo.city}</span>
-        )}
+        {geo?.city && <span className="text-xs text-slate-500">{geo.city}</span>}
       </header>
-      {!hasCustomFeed && !geo && (
+      {!geo && (
         <p className="text-sm text-slate-500">Select a location to see local news.</p>
       )}
-      {!hasCustomFeed && geo && !query && (
+      {geo && !query && (
         <p className="text-sm text-slate-500">We will search once you pick a place.</p>
-      )}
-      {hasCustomFeed && !isValidFeed && (
-        <p className="text-sm text-red-600">Enter a valid RSS feed URL to load headlines.</p>
       )}
       {shouldShowContent && isFetching && (
         <p className="text-sm text-slate-500">Loading news…</p>
@@ -204,7 +161,7 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
       )}
       {shouldShowContent && data && (
         <div className="flex flex-1 flex-col gap-3 text-sm">
-          {!hasCustomFeed && hasFilters && (
+          {hasFilters && (
             <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-medium text-slate-600 dark:text-slate-300">Filtered by</span>
@@ -239,7 +196,7 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemo
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-slate-600">Cached</span>
             )}
           </div>
-          {!hasCustomFeed && geo && (
+          {geo && (
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
               {ts ? (
                 <button
