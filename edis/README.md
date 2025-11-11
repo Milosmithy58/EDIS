@@ -32,11 +32,13 @@ Keys are optional unless you enable the related adapters. The defaults (Open-Met
 | `GNEWS_API_KEY` | Required for the default news provider. |
 | `NEWSAPI_API_KEY` | Used when enabling the optional NewsAPI provider. |
 | `OPENWEATHER_API_KEY` | Used when enabling the optional OpenWeather provider. |
+| `VISUALCROSSING_API_KEY` | Required for the Visual Crossing weather adapter. |
 | `MAPBOX_TOKEN` | Optional geocoding provider. |
 | `FBI_CRIME_API_KEY` | Required for US crime stats. |
 | `DEFAULT_COUNTRY` | Fallback for ambiguous searches (defaults to `UK`). |
-| `ENABLE_OPENWEATHER` | Set to `true` to switch the weather provider. |
+| `ENABLE_OPENWEATHER` | Legacy flag for the OpenWeather adapter (prefer `WEATHER_PROVIDER`). |
 | `ENABLE_NEWSAPI` | Set to `true` to switch the news provider. |
+| `WEATHER_PROVIDER` | Choose `visualcrossing` (default), `openmeteo`, or `openweather`. |
 
 > ⚠️ Never commit your `.env` file. Secrets stay local or move into secret managers.
 
@@ -99,11 +101,20 @@ Each provider adapter is isolated to `apps/server/src/adapters/**` so we can swa
 
 | Domain | Default adapter | Optional alternative |
 | --- | --- | --- |
-| Weather | Open-Meteo | OpenWeather (requires `ENABLE_OPENWEATHER=true` + key) |
+| Weather | Visual Crossing Timeline API | Open-Meteo (`WEATHER_PROVIDER=openmeteo`) or OpenWeather (`WEATHER_PROVIDER=openweather` + key) |
 | Crime | UK Police (by lat/lon) | FBI Crime Data (requires state + key) |
 | News | GNews | NewsAPI (requires `ENABLE_NEWSAPI=true` + key) |
 
 The server auto-detects the crime provider based on `country` (UK vs US). If the provider can’t answer the request, the UI displays a friendly message with retry guidance.
+
+### Weather provider (Visual Crossing Timeline API)
+
+- Sign up for an API key at [visualcrossing.com](https://www.visualcrossing.com/resources/documentation/weather-api/timeline-weather-api-old/)
+  and place it in `.env` as `VISUALCROSSING_API_KEY`.
+- Requests hit the Timeline endpoint, e.g.
+  `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/London,UK?unitGroup=metric&include=current,hours,days,alerts&lang=en&key=YOUR_KEY`.
+- The adapter normalizes current, hourly (24 hours), and daily (7 days) forecasts into our shared `WeatherDTO`.
+- Configure a different provider by setting `WEATHER_PROVIDER` to `openmeteo` or `openweather`.
 
 ### Client UX notes
 
@@ -180,12 +191,20 @@ Example: swapping the weather provider
 
 ```ts
 // apps/server/src/routes/weather.ts
-const weather = flags.openWeather
-  ? await openWeather.getWeather(lat, lon)
-  : await openMeteo.getWeather(lat, lon);
+const provider = flags.weatherProvider;
+
+if (provider === 'visualcrossing') {
+  return getWeatherVC(geoContext, units);
+}
+
+if (provider === 'openweather') {
+  return openWeather.getWeather(lat, lon);
+}
+
+return openMeteo.getWeather(lat, lon);
 ```
 
-Toggle by setting `ENABLE_OPENWEATHER=true` and providing an `OPENWEATHER_API_KEY` in `.env`.
+Select the adapter via `WEATHER_PROVIDER` in `.env` and supply the matching API key (e.g. `VISUALCROSSING_API_KEY`).
 
 ## Wix (Velo) migration guide
 
@@ -251,6 +270,8 @@ $w.onReady(async function () {
 
 - Store API keys in Wix Secrets Manager.
 - Read them with `wix-secrets-backend` inside backend modules.
+- Keep `VISUALCROSSING_API_KEY` in Secrets Manager and load it within `backend/edis/weather.jsw` before calling the Timeline API.
+- Replace any `node-fetch` usage with `wix-fetch` when porting adapters (Visual Crossing included).
 - Use Wix collections or memory for caching if needed.
 
 ### Crime provider note

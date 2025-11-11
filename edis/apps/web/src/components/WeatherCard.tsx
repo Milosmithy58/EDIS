@@ -22,10 +22,30 @@ type WeatherDTO = {
     precipMm: number;
     summary: string;
   }>;
+  meta?: {
+    source: string;
+    sourceLabel?: string;
+    url?: string;
+    updatedISO?: string;
+  };
 };
 
 type Props = {
   geo: GeoContext | null;
+};
+
+const getSourceLabel = (meta?: WeatherDTO['meta']) => {
+  if (!meta) {
+    return undefined;
+  }
+  if (meta.sourceLabel) {
+    return meta.sourceLabel;
+  }
+  if (!meta.source) {
+    return undefined;
+  }
+  const cleaned = meta.source.replace(/[-_]/g, ' ');
+  return cleaned.replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const WeatherCard = ({ geo }: Props) => {
@@ -50,11 +70,27 @@ const WeatherCard = ({ geo }: Props) => {
     }
   });
 
+  const sourceLabel = getSourceLabel(data?.meta);
+
   return (
     <article className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-      <header className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Weather</h2>
-        {geo?.city && <span className="text-xs text-slate-500">{geo.city}</span>}
+      <header className="mb-4 flex items-start justify-between gap-2">
+        <div className="flex flex-col">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Weather</h2>
+          {sourceLabel && (
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              Source: {sourceLabel}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          {geo?.city && <span className="text-xs text-slate-500 dark:text-slate-400">{geo.city}</span>}
+          {data?.meta?.updatedISO && (
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              Updated {formatDateTime(data.meta.updatedISO)}
+            </span>
+          )}
+        </div>
       </header>
       {!geo && <p className="text-sm text-slate-500">Select a location to see weather details.</p>}
       {geo && isFetching && <p className="text-sm text-slate-500">Loading weather…</p>}
