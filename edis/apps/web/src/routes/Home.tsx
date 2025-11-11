@@ -27,6 +27,7 @@ const Home = ({ adminNav }: HomeProps) => {
   const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
   const [selectedFilters, setSelectedFilters] = useState<string[]>(DEFAULT_FILTERS);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -94,6 +95,7 @@ const Home = ({ adminNav }: HomeProps) => {
   }, [selectedGeo]);
 
   const debouncedFilters = useDebounce(selectedFilters, 300);
+  const activeFilterCount = useMemo(() => normalizeFilters(selectedFilters).length, [selectedFilters]);
 
   const handleFiltersChange = (next: string[]) => {
     setSelectedFilters(normalizeFilters(next));
@@ -131,6 +133,34 @@ const Home = ({ adminNav }: HomeProps) => {
   const handleRemoveFilter = (label: string) => {
     setSelectedFilters((prev) => normalizeFilters(prev.filter((item) => item !== label)));
   };
+
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isFilterOpen]);
+
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsFilterOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFilterOpen]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -181,27 +211,68 @@ const Home = ({ adminNav }: HomeProps) => {
           </div>
         </section>
 
-        <section className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(240px,280px)_1fr]">
-          <FilterPanel selected={selectedFilters} onChange={handleFiltersChange} />
-          <div className="flex flex-col gap-6">
-            <section className="grid gap-6 lg:grid-cols-3">
-              <WeatherCard geo={selectedGeo} />
-              <CrimeCard geo={selectedGeo} country={country} />
-              <div className="flex flex-col gap-4">
-                <NewsCard
-                  geo={selectedGeo}
-                  query={composedNewsQuery}
-                  country={country}
-                  filters={debouncedFilters}
-                  onClearFilters={handleClearFilters}
-                  onRemoveFilter={handleRemoveFilter}
-                />
-                <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
-              </div>
-            </section>
+        <section className="flex flex-col gap-4">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Filter
+              {activeFilterCount > 0 ? (
+                <span className="ml-1 rounded-full bg-sky-600 px-2 py-0.5 text-xs font-semibold text-white dark:bg-sky-500">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
           </div>
+          <section className="grid gap-6 lg:grid-cols-3">
+            <WeatherCard geo={selectedGeo} />
+            <CrimeCard geo={selectedGeo} country={country} />
+            <div className="flex flex-col gap-4">
+              <NewsCard
+                geo={selectedGeo}
+                query={composedNewsQuery}
+                country={country}
+                filters={debouncedFilters}
+                onClearFilters={handleClearFilters}
+                onRemoveFilter={handleRemoveFilter}
+              />
+              <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
+            </div>
+          </section>
         </section>
       </main>
+      {isFilterOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            aria-hidden="true"
+            onClick={() => setIsFilterOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filter news topics"
+            className="relative z-10 w-full max-w-3xl space-y-3"
+          >
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Close
+              </button>
+            </div>
+            <FilterPanel
+              selected={selectedFilters}
+              onChange={handleFiltersChange}
+              className="max-h-[70vh] overflow-y-auto"
+            />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };

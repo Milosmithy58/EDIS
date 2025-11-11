@@ -32,7 +32,12 @@ const LocationMap = ({ geo }: LocationMapProps) => {
         key={mapSrc}
         title={`Map preview of ${geo.query}`}
         src={mapSrc}
-        className="h-[360px] w-full border-0"
+        className="w-full border-0"
+        style={{
+          aspectRatio: '4 / 3',
+          minHeight: '16rem',
+          maxHeight: '32rem'
+        }}
         allowFullScreen
         loading="lazy"
         referrerPolicy="no-referrer-when-downgrade"
