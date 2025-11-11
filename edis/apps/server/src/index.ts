@@ -11,6 +11,7 @@ import adminRouter from './routes/admin';
 import femaRouter from './routes/fema';
 import ticketsRouter from './routes/tickets';
 import { env } from './core/env';
+import crimeNewsRoutes from './routes/crimeNewsRoutes';
 
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -56,6 +57,7 @@ app.use('/api/geocode', geocodeRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/crime', crimeRouter);
 app.use('/api/news', newsRouter);
+app.use('/api', crimeNewsRoutes);
 app.use('/api/admin', adminRouter);
 app.use('/api/fema', femaRouter);
 app.use('/api/tickets', ticketsRouter);
