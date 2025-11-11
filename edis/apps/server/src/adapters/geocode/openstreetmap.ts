@@ -25,6 +25,7 @@ type OsmSearchResult = {
   lat: string;
   lon: string;
   type?: string;
+  class?: string;
   boundingbox?: OsmBoundingBox;
   address?: OsmAddress;
 };
@@ -68,18 +69,26 @@ export const search = async ({ query, country, scope, limit = 5 }: SearchOptions
       Accept: 'application/json'
     }
   });
-  return results
-    .filter((item) => {
-      const type = item.type ?? '';
-      if (scope === 'country') {
-        return type === 'country';
-      }
-      if (scope === 'admin') {
-        return ['state', 'county'].includes(type);
-      }
-      return ['city', 'town', 'village', 'hamlet', 'municipality'].includes(type) || !scope;
-    })
-    .map(buildGeoContext);
+  const matchesScope = (item: OsmSearchResult) => {
+    const type = item.type ?? '';
+    const address = item.address ?? {};
+
+    if (!scope) return true;
+
+    if (scope === 'country') {
+      return type === 'country' || Boolean(address.country);
+    }
+
+    if (scope === 'admin') {
+      const adminMatch = address.state || address.county || address.region || address.state_district;
+      return ['state', 'county', 'administrative', 'region', 'province'].includes(type) || Boolean(adminMatch);
+    }
+
+    const cityLike = address.city || address.town || address.village || address.hamlet || address.municipality;
+    return ['city', 'town', 'village', 'hamlet', 'municipality', 'administrative'].includes(type) || Boolean(cityLike);
+  };
+
+  return results.filter(matchesScope).map(buildGeoContext);
 };
 
 type ReverseOptions = {
