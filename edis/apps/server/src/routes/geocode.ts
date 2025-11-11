@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import etag from 'etag';
 import { LRUCache } from 'lru-cache';
-import { env } from '../core/env';
 import { GeoContext } from '../core/types';
 import * as osm from '../adapters/geocode/openstreetmap';
 
@@ -37,11 +36,6 @@ router.get('/', async (req, res) => {
     } else {
       res.status(400).json({ message: 'query or coordinates required', status: 400 });
       return;
-    }
-
-    // Fallback to default country from env if no results and user provided nothing
-    if ((!results || results.length === 0) && query) {
-      results = await osm.search({ query, country: env.DEFAULT_COUNTRY });
     }
 
     const payload = { results };

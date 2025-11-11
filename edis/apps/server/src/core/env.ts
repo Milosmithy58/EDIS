@@ -38,6 +38,8 @@ if (process.env.NODE_ENV === 'test') {
   process.env.ADMIN_TOKEN ??= 'test-admin-token';
   process.env.SECRETBOX_KEY ??= Buffer.from('0123456789abcdef0123456789abcdef').toString('base64');
   process.env.KEYS_STORE_PATH ??= './secrets/test-keys.enc';
+  process.env.SCRAPE_SOURCES_PATH ??= './secrets/test-sources.enc';
+  process.env.GEOCODER_PROVIDER ??= 'nominatim';
 }
 
 const EnvSchema = z.object({
@@ -46,12 +48,13 @@ const EnvSchema = z.object({
   ADMIN_TOKEN: z.string().min(12, 'ADMIN_TOKEN must be set and at least 12 characters long'),
   SECRETBOX_KEY: z.string().min(1, 'SECRETBOX_KEY must be a base64-encoded 32-byte key'),
   KEYS_STORE_PATH: z.string().default('./secrets/keys.enc'),
+  SCRAPE_SOURCES_PATH: z.string().default('./secrets/sources.enc'),
+  GEOCODER_PROVIDER: z.enum(['nominatim']).default('nominatim'),
   GNEWS_API_KEY: z.string().optional(),
   NEWSAPI_API_KEY: z.string().optional(),
   OPENWEATHER_API_KEY: z.string().optional(),
   MAPBOX_TOKEN: z.string().optional(),
   FBI_CRIME_API_KEY: z.string().optional(),
-  DEFAULT_COUNTRY: z.string().default('UK'),
   ENABLE_OPENWEATHER: z.string().optional(),
   ENABLE_NEWSAPI: z.string().optional(),
   NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('gnews'),

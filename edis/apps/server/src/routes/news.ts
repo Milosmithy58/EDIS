@@ -1,242 +1,106 @@
-import type { Request, Response } from 'express';
 import { Router } from 'express';
-import etag from 'etag';
-import { LRUCache } from 'lru-cache';
-import { flags, newsProvider } from '../core/env';
-import { NewsDTO } from '../core/types';
-import * as gnews from '../adapters/news/gnews';
-import * as newsapi from '../adapters/news/newsapi';
-import * as rss from '../adapters/news/rss';
-import {
-  FILTER_KEYWORDS,
-  NewsFilterLabel,
-  buildFilterQuery,
-  normalizeFilters,
-  serializeFilters
-} from '../adapters/news/filterKeywords';
-import { fetchNewsWebz, NewsProviderError } from '../adapters/news/webzio';
-
-const cache = new LRUCache<string, NewsDTO>({ max: 200, ttl: 1000 * 60 * 5 });
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
+import { geocode } from '../adapters/geocode/nominatim';
+import { scrapeNews } from '../adapters/scraper/newsScraper';
+import { buildQueryForFilters, filterSlugs } from '../core/news/filters';
+import { loadSources } from '../core/secure/sourcesStore';
+import { NewsFeedDTO, StandardizedLocation } from '../types/news';
 
 const router = Router();
 
-const buildFilterClauses = (labels: NewsFilterLabel[]): string[] =>
-  labels.map((label) => {
-    const terms = FILTER_KEYWORDS[label]
-      .map((term) => term.trim())
-      .filter((term) => term.length > 0);
-    const uniqueTerms = Array.from(new Set(terms));
-    const joined = uniqueTerms
-      .map((term) => (term.includes(' ') ? `"${term}"` : term))
-      .join(' OR ');
-    return `(${joined})`;
-  });
-
-type NewsRequestOptions = {
-  baseQuery?: string;
-  country?: string;
-  rssUrl?: string;
-  filters: NewsFilterLabel[];
-  ts?: number;
-  next?: string;
-};
-
-const handleNewsRequest = async (
-  req: Request,
-  res: Response,
-  { baseQuery, country, rssUrl, filters, ts, next }: NewsRequestOptions
-) => {
-  const trimmedQuery = (baseQuery ?? '').trim();
-  const normalizedCountry = typeof country === 'string' && country.trim().length > 0 ? country : undefined;
-  const normalizedFilters = Array.isArray(filters) ? filters : [];
-  const filterClauses = buildFilterClauses(normalizedFilters);
-  const filtersKey = serializeFilters(normalizedFilters);
-  const normalizedTs = typeof ts === 'number' && Number.isFinite(ts) ? ts : undefined;
-  const normalizedRssUrl = rssUrl?.trim();
-
-  if (next && newsProvider !== 'webzio') {
-    res
-      .status(400)
-      .json({ message: 'Pagination is only available with the Webz.io provider', status: 400 });
-    return;
-  }
-
-  if (!next && !normalizedRssUrl && !trimmedQuery) {
-    res.status(400).json({ message: 'query or rssUrl is required', status: 400 });
-    return;
-  }
-
-  if (normalizedRssUrl) {
-    try {
-      // eslint-disable-next-line no-new
-      new URL(normalizedRssUrl);
-    } catch (error) {
-      res.status(400).json({ message: 'rssUrl must be a valid URL', status: 400 });
-      return;
-    }
-  }
-
-  if (ts !== undefined && normalizedTs === undefined) {
-    res
-      .status(400)
-      .json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
-    return;
-  }
-
-  const legacyProviderQuery = normalizedRssUrl
-    ? undefined
-    : buildFilterQuery(trimmedQuery, normalizedFilters);
-
-  const cacheKey = JSON.stringify({
-    query: newsProvider === 'webzio' ? trimmedQuery : legacyProviderQuery ?? trimmedQuery,
-    country: normalizedCountry,
-    rssUrl: normalizedRssUrl,
-    filters: filtersKey,
-    ts: normalizedTs,
-    provider: normalizedRssUrl
-      ? 'rss'
-      : newsProvider === 'webzio'
-      ? 'webzio'
-      : flags.newsApi
-      ? 'newsapi'
-      : 'gnews'
-  });
-
-  if (!next && cache.has(cacheKey)) {
-    const cached = cache.get(cacheKey)!;
-    const responsePayload = { ...cached, cached: true };
-    const body = JSON.stringify(responsePayload);
-    const tag = etag(body);
-    if (req.headers['if-none-match'] === tag) {
-      res.status(304).end();
-      return;
-    }
-    res.setHeader('ETag', tag);
-    res.json(responsePayload);
-    return;
-  }
-
-  try {
-    if (next) {
-      const payload = await fetchNewsWebz({ baseQuery: '', filters: [], nextUrl: next });
-      res.json(payload);
-      return;
-    }
-
-    const payload = normalizedRssUrl
-      ? await rss.getNewsFromFeed(normalizedRssUrl)
-      : newsProvider === 'webzio'
-      ? await fetchNewsWebz({
-          baseQuery: trimmedQuery,
-          filters: filterClauses,
-          countryCode: normalizedCountry?.toUpperCase(),
-          ts: normalizedTs
-        })
-      : flags.newsApi
-      ? await newsapi.getNews(legacyProviderQuery!, normalizedCountry)
-      : await gnews.getNews(legacyProviderQuery!, normalizedCountry);
-
-    if (normalizedRssUrl || newsProvider !== 'webzio') {
-      cache.set(cacheKey, payload);
-    } else {
-      cache.set(cacheKey, { ...payload, cached: payload.cached ?? false });
-    }
-
-    const body = JSON.stringify(payload);
-    const tag = etag(body);
-    if (req.headers['if-none-match'] === tag) {
-      res.status(304).end();
-      return;
-    }
-    res.setHeader('ETag', tag);
-    res.json(payload);
-  } catch (error) {
-    if (error instanceof NewsProviderError) {
-      res.status(error.status).json(error.dto);
-      return;
-    }
-    console.error(error);
-    res.status(500).json({ message: 'Failed to load news', status: 500, retryable: true });
-  }
-};
-
-router.get('/', async (req, res) => {
-  const {
-    query,
-    country,
-    rssUrl: rawRssUrl,
-    filters: rawFilters,
-    ts: rawTs,
-    next
-  } = req.query as Record<string, string | undefined>;
-  const rssUrl = rawRssUrl?.trim();
-
-  let parsedFilters: unknown = [];
-  if (rawFilters) {
-    try {
-      parsedFilters = JSON.parse(rawFilters);
-    } catch (error) {
-      console.warn('Unable to parse filters payload', error);
-      parsedFilters = [];
-    }
-  }
-
-  const normalizedFilters = normalizeFilters(parsedFilters);
-  const ts = rawTs ? Number.parseInt(rawTs, 10) : undefined;
-  if (Number.isNaN(ts as number)) {
-    res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
-    return;
-  }
-  await handleNewsRequest(req, res, {
-    baseQuery: typeof query === 'string' ? query : '',
-    country,
-    rssUrl,
-    filters: normalizedFilters,
-    ts,
-    next
-  });
+const newsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false
 });
 
-router.post('/', async (req, res) => {
-  const { query, filters, country, ts } = (req.body ?? {}) as {
-    query?: unknown;
-    filters?: unknown;
-    country?: unknown;
-    ts?: unknown;
-  };
+router.use(newsLimiter);
 
-  if (typeof query !== 'string' || !query.trim()) {
-    res.status(400).json({ message: 'query must be a non-empty string', status: 400 });
+const BodySchema = z.object({
+  filters: z.array(z.string()).max(28).default([]),
+  query: z.string().trim().optional(),
+  locationQuery: z.string().trim().optional(),
+  since: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional()
+});
+
+const parseSince = (value: string | undefined): Date | undefined => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+  return parsed;
+};
+
+const DEFAULT_WINDOW_MS = 1000 * 60 * 60 * 48;
+
+router.post('/scrape', async (req, res) => {
+  let payload: z.infer<typeof BodySchema>;
+  try {
+    payload = BodySchema.parse(req.body ?? {});
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ message: error.issues[0]?.message ?? 'Invalid request payload', status: 400 });
+      return;
+    }
+    res.status(400).json({ message: 'Invalid request payload', status: 400 });
     return;
   }
 
-  const normalizedFilters = normalizeFilters(filters ?? []);
+  const invalidFilter = payload.filters.find((slug) => !filterSlugs.has(slug));
+  if (invalidFilter) {
+    res.status(400).json({ message: `Unknown filter: ${invalidFilter}`, status: 400 });
+    return;
+  }
 
-  let normalizedTs: number | undefined;
-  if (ts !== undefined && ts !== null) {
-    if (typeof ts === 'number' && Number.isFinite(ts)) {
-      normalizedTs = ts;
-    } else if (typeof ts === 'string' && ts.trim()) {
-      const parsed = Number.parseInt(ts, 10);
-      if (Number.isNaN(parsed)) {
-        res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
-        return;
-      }
-      normalizedTs = parsed;
-    } else {
-      res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
+  let location: StandardizedLocation | null = null;
+  if (payload.locationQuery) {
+    location = await geocode(payload.locationQuery);
+    if (!location) {
+      res.status(400).json({ message: 'Unable to resolve location from query', status: 400 });
       return;
     }
   }
 
-  const normalizedCountry = typeof country === 'string' && country.trim().length > 0 ? country.trim() : undefined;
+  const sinceDate = parseSince(payload.since) ?? new Date(Date.now() - DEFAULT_WINDOW_MS);
 
-  await handleNewsRequest(req, res, {
-    baseQuery: query,
-    country: normalizedCountry,
-    filters: normalizedFilters,
-    ts: normalizedTs
-  });
+  const sources = await loadSources();
+  const domains = sources.domains ?? [];
+  if (domains.length === 0) {
+    const empty: NewsFeedDTO = { items: [], fetchedAt: new Date().toISOString() };
+    res.json(empty);
+    return;
+  }
+
+  const filterQueries = buildQueryForFilters(payload.filters);
+  const keywords = payload.query ? [payload.query] : undefined;
+
+  try {
+    const items = await scrapeNews({
+      filters: payload.filters,
+      filterQueries,
+      location,
+      keywords,
+      domains,
+      since: sinceDate,
+      limit: payload.limit ?? 50
+    });
+    const response: NewsFeedDTO = {
+      items,
+      fetchedAt: new Date().toISOString()
+    };
+    res.json(response);
+  } catch (error) {
+    console.error({ err: error instanceof Error ? error.message : error }, 'Failed to scrape news feed');
+    res.status(500).json({ message: 'Failed to scrape news feed', status: 500, retryable: true });
+  }
+});
+
+router.all('*', (_req, res) => {
+  res.status(404).json({ message: 'Not Found', status: 404 });
 });
 
 export default router;

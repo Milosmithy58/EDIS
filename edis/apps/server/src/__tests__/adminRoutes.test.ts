@@ -17,6 +17,7 @@ describe('admin routes', () => {
     process.env.SECRETBOX_KEY = BASE64_KEY;
     process.env.ADMIN_TOKEN = 'test-admin-token';
     process.env.KEYS_STORE_PATH = join(storeDir, 'keys.enc');
+    process.env.SCRAPE_SOURCES_PATH = join(storeDir, 'sources.enc');
   });
 
   afterEach(async () => {
@@ -24,6 +25,7 @@ describe('admin routes', () => {
     delete process.env.SECRETBOX_KEY;
     delete process.env.ADMIN_TOKEN;
     delete process.env.KEYS_STORE_PATH;
+    delete process.env.SCRAPE_SOURCES_PATH;
     vi.unstubAllGlobals();
   });
 
@@ -68,5 +70,37 @@ describe('admin routes', () => {
     expect(response.body.ok).toBe(false);
     expect(response.body.details).toMatchObject({ status: 'http-error', httpStatus: 401 });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows admin to persist scrape domains', async () => {
+    const { default: app } = await import('../index');
+
+    const response = await request(app)
+      .post('/api/admin/sources')
+      .set('Authorization', 'Bearer test-admin-token')
+      .send({ domains: ['reuters.com', 'bbc.co.uk'], blocked: ['spam.com'], updatedBy: 'tester' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.domains).toEqual(['reuters.com', 'bbc.co.uk']);
+    expect(response.body.blocked).toEqual(['spam.com']);
+
+    const getResponse = await request(app)
+      .get('/api/admin/sources')
+      .set('Authorization', 'Bearer test-admin-token');
+
+    expect(getResponse.status).toBe(200);
+    expect(getResponse.body.domains).toEqual(['reuters.com', 'bbc.co.uk']);
+    expect(getResponse.body.updatedBy).toBe('tester');
+  });
+
+  it('rejects invalid source payloads', async () => {
+    const { default: app } = await import('../index');
+
+    const response = await request(app)
+      .post('/api/admin/sources')
+      .set('Authorization', 'Bearer test-admin-token')
+      .send({ domains: [''], blocked: ['ok.com'] });
+
+    expect(response.status).toBe(400);
   });
 });

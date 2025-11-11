@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from '../core/env';
 import { getKey, setKey } from '../core/secrets/secureStore';
 import type { ProviderName } from '../core/secrets/types';
+import adminSourcesRouter from './adminSources';
 
 const PROVIDERS: ProviderName[] = ['visualcrossing', 'newsapi', 'gnews'];
 type Provider = ProviderName;
@@ -200,6 +201,7 @@ const adminRouter = Router();
 
 adminRouter.use(adminLimiter);
 adminRouter.use(requireAdmin);
+adminRouter.use('/sources', adminSourcesRouter);
 
 adminRouter.get('/providers', (req, res) => {
   res.json({ providers: PROVIDERS });
