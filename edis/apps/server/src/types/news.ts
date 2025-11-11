@@ -30,4 +30,5 @@ export type NewsItemDTO = {
 export type NewsFeedDTO = {
   items: NewsItemDTO[];
   fetchedAt: string;
+  nextCursor?: string;
 };
