@@ -45,8 +45,8 @@ const EnvSchema = z.object({
   DEFAULT_COUNTRY: z.string().default('UK'),
   ENABLE_OPENWEATHER: z.string().optional(),
   ENABLE_NEWSAPI: z.string().optional(),
-  VISUALCROSSING_API_KEY: z.string().optional(),
-  WEATHER_PROVIDER: z.enum(['visualcrossing', 'openweather', 'openmeteo']).default('visualcrossing')
+  NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('gnews'),
+  WEBZIO_TOKEN: z.string().optional()
 });
 
 export const env = EnvSchema.parse(process.env);
@@ -56,3 +56,9 @@ export const flags = {
   newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY),
   weatherProvider: env.WEATHER_PROVIDER
 };
+
+export const newsProvider = env.NEWS_PROVIDER;
+
+if (newsProvider === 'webzio' && !env.WEBZIO_TOKEN) {
+  throw new Error('WEBZIO_TOKEN is required when NEWS_PROVIDER=webzio.');
+}

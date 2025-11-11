@@ -44,6 +44,11 @@ export const FILTER_KEYWORDS = {
 
 export type NewsFilterLabel = keyof typeof FILTER_KEYWORDS;
 
+// Matches the server-side boosters so that both layers document the ranking
+// knobs that influence Webz.io's search quality. Update both files together
+// when experimenting with Webz query modifiers.
+export const QUALITY_BOOSTERS = ['site_type:news', 'is_first:true', 'site_category:top_news'] as const;
+
 export const FILTER_GROUPS: Record<string, NewsFilterLabel[]> = {
   'Crime & Public Safety': [
     'Violent Crime',

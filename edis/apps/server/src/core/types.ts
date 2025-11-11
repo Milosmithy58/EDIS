@@ -57,8 +57,11 @@ export type NewsDTO = {
     publishedAtISO: string;
     imageUrl?: string;
   }>;
-  total: number;
+  total?: number;
   source: string;
+  next?: string;
+  notice?: string;
+  cached?: boolean;
 };
 
 export type ErrorDTO = {

@@ -25,11 +25,13 @@ Copy the example file and fill in any API keys you have available:
 cp .env.example .env
 ```
 
-Keys are optional unless you enable the related adapters. The defaults (Open-Meteo, UK Police, GNews) only require a `GNEWS_API_KEY`.
+Keys are optional unless you enable the related adapters. The defaults (Open-Meteo, UK Police, Webz.io) require a `WEBZIO_TOKEN`.
 
 | Variable | Description |
 | --- | --- |
-| `GNEWS_API_KEY` | Required for the default news provider. |
+| `WEBZIO_TOKEN` | Required when `NEWS_PROVIDER=webzio` (Webz.io News API Lite). |
+| `NEWS_PROVIDER` | Choose the active news adapter (`webzio`, `gnews`, `newsapi`). |
+| `GNEWS_API_KEY` | Required when `NEWS_PROVIDER=gnews`. |
 | `NEWSAPI_API_KEY` | Used when enabling the optional NewsAPI provider. |
 | `OPENWEATHER_API_KEY` | Used when enabling the optional OpenWeather provider. |
 | `VISUALCROSSING_API_KEY` | Required for the Visual Crossing weather adapter. |
@@ -41,6 +43,15 @@ Keys are optional unless you enable the related adapters. The defaults (Open-Met
 | `WEATHER_PROVIDER` | Choose `visualcrossing` (default), `openmeteo`, or `openweather`. |
 
 > ⚠️ Never commit your `.env` file. Secrets stay local or move into secret managers.
+
+### Webz.io setup
+
+- Endpoint: `https://api.webz.io/newsApiLite` with `token`, `q`, optional `ts`, and pagination via the `'next'` URL.
+- Quotas: Free tier allows **1,000 calls/month** with up to **10 results per request**.
+- Pagination: the response includes a `'next'` cursor; reuse it verbatim for the next page.
+- Time windowing: pass a Unix millisecond `ts` to pivot within the last 30 days.
+- The server caches identical `{q, ts}` lookups for 10 minutes and stops hitting the API when the monthly budget exceeds 90%.
+- UI labels in `apps/web/src/lib/newsFilters.ts` feed directly into the boolean query, so update both client and server maps when you add filters.
 
 ### Running the app
 
@@ -103,7 +114,7 @@ Each provider adapter is isolated to `apps/server/src/adapters/**` so we can swa
 | --- | --- | --- |
 | Weather | Visual Crossing Timeline API | Open-Meteo (`WEATHER_PROVIDER=openmeteo`) or OpenWeather (`WEATHER_PROVIDER=openweather` + key) |
 | Crime | UK Police (by lat/lon) | FBI Crime Data (requires state + key) |
-| News | GNews | NewsAPI (requires `ENABLE_NEWSAPI=true` + key) |
+| News | Webz.io News API Lite | GNews (`NEWS_PROVIDER=gnews`) or NewsAPI (requires `ENABLE_NEWSAPI=true` + key) |
 
 The server auto-detects the crime provider based on `country` (UK vs US). If the provider can’t answer the request, the UI displays a friendly message with retry guidance.
 
@@ -128,6 +139,10 @@ The server auto-detects the crime provider based on `country` (UK vs US). If the
 
 The news card now supports topic filters so operators can zero in on
 high-impact incidents (crime, infrastructure, weather, travel, health).
+With Webz.io the server builds a boolean query that boosts the selected
+city/region in `title:` and `text:` clauses, groups each filter label
+inside parentheses, and appends quality boosters (`site_type:news`
+and `is_first:true`).
 
 ### Single source of truth
 
@@ -149,34 +164,46 @@ London, UK (flood OR flooding OR "flash flood" OR "river levels" OR deluge) OR (
 1. Users toggle checkboxes in the `FilterPanel` component. Selections persist to
    `localStorage` (`edis.news.filters.v1`).
 2. The news React Query uses `serializeFilters()` to keep cache keys stable and
-   sends the active labels to `/api/news?filters=[...]`.
-3. The Express route sanitizes the labels, composes the provider query with
-   `buildFilterQuery()`, and forwards it to GNews/NewsAPI.
-4. React renders removable pills above the news list and exposes a “Clear all
-   filters” shortcut inside the card.
+   sends the active labels, country code, and location text to `/api/news`.
+3. The Express route sanitizes the labels, builds Webz.io OR groups, and calls
+   `fetchNewsWebz()` which handles caching, rate-limit retries, and pagination.
+4. React renders removable pills above the news list, shows any provider
+   warnings, and exposes “Load more (10)” and “Older (30d)” controls to stay
+   within the free-tier budget.
 
 ### Porting to Wix (Velo)
 
-- Create `backend/edis/news.jsw` that accepts `{ query, country, filters }`.
-- Copy the `FILTER_KEYWORDS` map and helper used on the server. Call it from the
-  Wix module before invoking `wix-fetch`.
+- Create `backend/edis/news.jsw` that accepts `{ base, filters, country, ts, next }`.
+- Copy the `FILTER_KEYWORDS` map and boolean query helpers used on the server so Wix mirrors the same Webz.io logic.
 - Fetch provider data with:
 
   ```js
   import { fetch } from 'wix-fetch';
   import { getSecret } from 'wix-secrets-backend';
 
-  export async function news({ query, country, filters = [] }) {
-    const token = await getSecret('GNEWS_API_KEY');
-    const finalQuery = buildFilterQuery(query, filters);
-    const response = await fetch(
-      `https://gnews.io/api/v4/search?q=${encodeURIComponent(finalQuery)}&token=${token}&country=${country}`
-    );
+  export async function news({ base, filters = [], country, ts, next }) {
+    const token = await getSecret('WEBZIO_TOKEN');
+
+    if (next) {
+      const url = new URL(next);
+      url.searchParams.set('token', token);
+      const response = await fetch(url.toString());
+      return response.json();
+    }
+
+    const filterGroups = buildFilterClauses(filters);
+    const query = composeWebzQuery(base, filterGroups, country);
+    const search = new URLSearchParams({ token, q: query, size: '10' });
+    if (typeof ts === 'number') {
+      search.set('ts', String(ts));
+    }
+
+    const response = await fetch(`https://api.webz.io/newsApiLite?${search.toString()}`);
     return response.json();
   }
   ```
 
-- Store API keys in Wix Secrets Manager and reuse the React-side
+- Store tokens in Wix Secrets Manager and reuse the React-side
   serialization helpers to keep behaviour aligned.
 
 ## Adapter customization
