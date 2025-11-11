@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import LocationSearch, { GeoContext } from '../components/LocationSearch';
+import LocationMap from '../components/LocationMap';
 import WeatherCard from '../components/WeatherCard';
 import CrimeCard from '../components/CrimeCard';
 import NewsCard from '../components/NewsCard';
@@ -176,6 +177,7 @@ const Home = ({ adminNav }: HomeProps) => {
             <div className="w-full">
               <LocationSearch country={country} onSelect={setSelectedGeo} />
             </div>
+            <LocationMap geo={selectedGeo} />
           </div>
         </section>
 
