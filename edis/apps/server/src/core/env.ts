@@ -44,7 +44,9 @@ const EnvSchema = z.object({
   FBI_CRIME_API_KEY: z.string().optional(),
   DEFAULT_COUNTRY: z.string().default('UK'),
   ENABLE_OPENWEATHER: z.string().optional(),
-  ENABLE_NEWSAPI: z.string().optional()
+  ENABLE_NEWSAPI: z.string().optional(),
+  NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('gnews'),
+  WEBZIO_TOKEN: z.string().optional()
 });
 
 export const env = EnvSchema.parse(process.env);
@@ -53,3 +55,9 @@ export const flags = {
   openWeather: env.ENABLE_OPENWEATHER === 'true' && Boolean(env.OPENWEATHER_API_KEY),
   newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY)
 };
+
+export const newsProvider = env.NEWS_PROVIDER;
+
+if (newsProvider === 'webzio' && !env.WEBZIO_TOKEN) {
+  throw new Error('WEBZIO_TOKEN is required when NEWS_PROVIDER=webzio.');
+}

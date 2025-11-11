@@ -45,6 +45,12 @@ export const FILTER_KEYWORDS = {
 
 export type NewsFilterLabel = keyof typeof FILTER_KEYWORDS;
 
+// Optional provider hints that help promote verified news sites and minimise
+// duplicates when composing the Webz.io boolean query. The adapter appends
+// these automatically so non-developers can tweak or remove boosters in one
+// place if Webz adjusts its ranking behaviour in the future.
+export const QUALITY_BOOSTERS = ['site_type:news', 'is_first:true', 'site_category:top_news'] as const;
+
 export const normalizeFilters = (filters: unknown): NewsFilterLabel[] => {
   if (!Array.isArray(filters)) {
     return [];
