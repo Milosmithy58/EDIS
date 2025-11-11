@@ -111,7 +111,7 @@ export const buildDisasterQuery = (
   }
 
   if (since) {
-    filters.push(`incidentBeginDate ge ${since}`);
+    filters.push(`incidentBeginDate ge datetime'${escapeLiteral(since)}'`);
   }
 
   if (types && types.length > 0) {
