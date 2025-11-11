@@ -6,6 +6,7 @@ import WeatherCard from '../components/WeatherCard';
 import CrimeCard from '../components/CrimeCard';
 import NewsCard from '../components/NewsCard';
 import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
+import LocalTicketsCard from '../components/LocalTicketsCard';
 import { COUNTRY_OPTIONS, getDefaultCountry } from '../lib/country';
 import FilterPanel from '../components/FilterPanel';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
@@ -239,6 +240,7 @@ const Home = ({ adminNav }: HomeProps) => {
                 onRemoveFilter={handleRemoveFilter}
               />
               <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
+              <LocalTicketsCard geo={selectedGeo} />
             </div>
           </section>
         </section>
