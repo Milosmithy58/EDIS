@@ -1,3 +1,4 @@
+import type { Request, Response } from 'express';
 import { Router } from 'express';
 import etag from 'etag';
 import { LRUCache } from 'lru-cache';
@@ -19,8 +20,8 @@ const cache = new LRUCache<string, NewsDTO>({ max: 200, ttl: 1000 * 60 * 5 });
 
 const router = Router();
 
-const buildFilterClauses = (labels: NewsFilterLabel[]): string[] => {
-  return labels.map((label) => {
+const buildFilterClauses = (labels: NewsFilterLabel[]): string[] =>
+  labels.map((label) => {
     const terms = FILTER_KEYWORDS[label]
       .map((term) => term.trim())
       .filter((term) => term.length > 0);
@@ -30,65 +31,69 @@ const buildFilterClauses = (labels: NewsFilterLabel[]): string[] => {
       .join(' OR ');
     return `(${joined})`;
   });
+
+type NewsRequestOptions = {
+  baseQuery?: string;
+  country?: string;
+  rssUrl?: string;
+  filters: NewsFilterLabel[];
+  ts?: number;
+  next?: string;
 };
 
-router.get('/', async (req, res) => {
-  const {
-    query,
-    country,
-    rssUrl: rawRssUrl,
-    filters: rawFilters,
-    ts: rawTs,
-    next
-  } = req.query as Record<string, string | undefined>;
-  const rssUrl = rawRssUrl?.trim();
+const handleNewsRequest = async (
+  req: Request,
+  res: Response,
+  { baseQuery, country, rssUrl, filters, ts, next }: NewsRequestOptions
+) => {
+  const trimmedQuery = (baseQuery ?? '').trim();
+  const normalizedCountry = typeof country === 'string' && country.trim().length > 0 ? country : undefined;
+  const normalizedFilters = Array.isArray(filters) ? filters : [];
+  const filterClauses = buildFilterClauses(normalizedFilters);
+  const filtersKey = serializeFilters(normalizedFilters);
+  const normalizedTs = typeof ts === 'number' && Number.isFinite(ts) ? ts : undefined;
+  const normalizedRssUrl = rssUrl?.trim();
+
   if (next && newsProvider !== 'webzio') {
-    res.status(400).json({ message: 'Pagination is only available with the Webz.io provider', status: 400 });
+    res
+      .status(400)
+      .json({ message: 'Pagination is only available with the Webz.io provider', status: 400 });
     return;
   }
-  if (!next && !query && !rssUrl) {
+
+  if (!next && !normalizedRssUrl && !trimmedQuery) {
     res.status(400).json({ message: 'query or rssUrl is required', status: 400 });
     return;
   }
 
-  if (rssUrl) {
+  if (normalizedRssUrl) {
     try {
       // eslint-disable-next-line no-new
-      new URL(rssUrl);
+      new URL(normalizedRssUrl);
     } catch (error) {
       res.status(400).json({ message: 'rssUrl must be a valid URL', status: 400 });
       return;
     }
   }
 
-  let parsedFilters: unknown = [];
-  if (rawFilters) {
-    try {
-      parsedFilters = JSON.parse(rawFilters);
-    } catch (error) {
-      console.warn('Unable to parse filters payload', error);
-      parsedFilters = [];
-    }
-  }
-
-  const normalizedFilters = normalizeFilters(parsedFilters);
-  const filtersKey = serializeFilters(normalizedFilters);
-  const ts = rawTs ? Number.parseInt(rawTs, 10) : undefined;
-  const filterClauses = buildFilterClauses(normalizedFilters);
-  const legacyProviderQuery = rssUrl ? undefined : buildFilterQuery(query ?? '', normalizedFilters);
-
-  if (Number.isNaN(ts as number)) {
-    res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
+  if (ts !== undefined && normalizedTs === undefined) {
+    res
+      .status(400)
+      .json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
     return;
   }
 
+  const legacyProviderQuery = normalizedRssUrl
+    ? undefined
+    : buildFilterQuery(trimmedQuery, normalizedFilters);
+
   const cacheKey = JSON.stringify({
-    query: newsProvider === 'webzio' ? query : legacyProviderQuery ?? query,
-    country,
-    rssUrl,
+    query: newsProvider === 'webzio' ? trimmedQuery : legacyProviderQuery ?? trimmedQuery,
+    country: normalizedCountry,
+    rssUrl: normalizedRssUrl,
     filters: filtersKey,
-    ts,
-    provider: rssUrl
+    ts: normalizedTs,
+    provider: normalizedRssUrl
       ? 'rss'
       : newsProvider === 'webzio'
       ? 'webzio'
@@ -96,6 +101,7 @@ router.get('/', async (req, res) => {
       ? 'newsapi'
       : 'gnews'
   });
+
   if (!next && cache.has(cacheKey)) {
     const cached = cache.get(cacheKey)!;
     const responsePayload = { ...cached, cached: true };
@@ -109,6 +115,7 @@ router.get('/', async (req, res) => {
     res.json(responsePayload);
     return;
   }
+
   try {
     if (next) {
       const payload = await fetchNewsWebz({ baseQuery: '', filters: [], nextUrl: next });
@@ -116,20 +123,20 @@ router.get('/', async (req, res) => {
       return;
     }
 
-    const payload = rssUrl
-      ? await rss.getNewsFromFeed(rssUrl)
+    const payload = normalizedRssUrl
+      ? await rss.getNewsFromFeed(normalizedRssUrl)
       : newsProvider === 'webzio'
       ? await fetchNewsWebz({
-          baseQuery: query ?? '',
+          baseQuery: trimmedQuery,
           filters: filterClauses,
-          countryCode: country?.toUpperCase(),
-          ts
+          countryCode: normalizedCountry?.toUpperCase(),
+          ts: normalizedTs
         })
       : flags.newsApi
-      ? await newsapi.getNews(legacyProviderQuery!, country)
-      : await gnews.getNews(legacyProviderQuery!, country);
+      ? await newsapi.getNews(legacyProviderQuery!, normalizedCountry)
+      : await gnews.getNews(legacyProviderQuery!, normalizedCountry);
 
-    if (rssUrl || newsProvider !== 'webzio') {
+    if (normalizedRssUrl || newsProvider !== 'webzio') {
       cache.set(cacheKey, payload);
     } else {
       cache.set(cacheKey, { ...payload, cached: payload.cached ?? false });
@@ -151,6 +158,85 @@ router.get('/', async (req, res) => {
     console.error(error);
     res.status(500).json({ message: 'Failed to load news', status: 500, retryable: true });
   }
+};
+
+router.get('/', async (req, res) => {
+  const {
+    query,
+    country,
+    rssUrl: rawRssUrl,
+    filters: rawFilters,
+    ts: rawTs,
+    next
+  } = req.query as Record<string, string | undefined>;
+  const rssUrl = rawRssUrl?.trim();
+
+  let parsedFilters: unknown = [];
+  if (rawFilters) {
+    try {
+      parsedFilters = JSON.parse(rawFilters);
+    } catch (error) {
+      console.warn('Unable to parse filters payload', error);
+      parsedFilters = [];
+    }
+  }
+
+  const normalizedFilters = normalizeFilters(parsedFilters);
+  const ts = rawTs ? Number.parseInt(rawTs, 10) : undefined;
+  if (Number.isNaN(ts as number)) {
+    res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
+    return;
+  }
+  await handleNewsRequest(req, res, {
+    baseQuery: typeof query === 'string' ? query : '',
+    country,
+    rssUrl,
+    filters: normalizedFilters,
+    ts,
+    next
+  });
+});
+
+router.post('/', async (req, res) => {
+  const { query, filters, country, ts } = (req.body ?? {}) as {
+    query?: unknown;
+    filters?: unknown;
+    country?: unknown;
+    ts?: unknown;
+  };
+
+  if (typeof query !== 'string' || !query.trim()) {
+    res.status(400).json({ message: 'query must be a non-empty string', status: 400 });
+    return;
+  }
+
+  const normalizedFilters = normalizeFilters(filters ?? []);
+
+  let normalizedTs: number | undefined;
+  if (ts !== undefined && ts !== null) {
+    if (typeof ts === 'number' && Number.isFinite(ts)) {
+      normalizedTs = ts;
+    } else if (typeof ts === 'string' && ts.trim()) {
+      const parsed = Number.parseInt(ts, 10);
+      if (Number.isNaN(parsed)) {
+        res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
+        return;
+      }
+      normalizedTs = parsed;
+    } else {
+      res.status(400).json({ message: 'ts must be a valid Unix millisecond timestamp', status: 400 });
+      return;
+    }
+  }
+
+  const normalizedCountry = typeof country === 'string' && country.trim().length > 0 ? country.trim() : undefined;
+
+  await handleNewsRequest(req, res, {
+    baseQuery: query,
+    country: normalizedCountry,
+    filters: normalizedFilters,
+    ts: normalizedTs
+  });
 });
 
 export default router;

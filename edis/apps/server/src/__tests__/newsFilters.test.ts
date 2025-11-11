@@ -10,4 +10,13 @@ describe('buildFilterQuery', () => {
     expect(result).toContain(') OR (');
     expect(result).toContain('(protest OR demonstration OR march OR strike OR picket)');
   });
+
+  it('builds grouped clauses even without a base query', () => {
+    const result = buildFilterQuery('', ['Flooding', 'Civil Unrest / Protests']);
+
+    expect(result.startsWith('(')).toBe(true);
+    expect(result.split(' OR ').length).toBeGreaterThan(1);
+    expect(result).toContain('(flood');
+    expect(result).toContain('(protest');
+  });
 });

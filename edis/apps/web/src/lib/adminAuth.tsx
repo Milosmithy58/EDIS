@@ -7,7 +7,11 @@ type AdminAuthContextValue = {
 
 const AdminAuthContext = createContext<AdminAuthContextValue | undefined>(undefined);
 
-export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+type AdminAuthProviderProps = {
+  children: React.ReactNode;
+};
+
+export const AdminAuthProvider = ({ children }: AdminAuthProviderProps) => {
   const [token, setToken] = useState<string | null>(null);
   const value = useMemo(() => ({ token, setToken }), [token]);
   return <AdminAuthContext.Provider value={value}>{children}</AdminAuthContext.Provider>;

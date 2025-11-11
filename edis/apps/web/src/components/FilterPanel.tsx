@@ -1,5 +1,13 @@
 import clsx from 'clsx';
-import { DEFAULT_FILTERS, FILTER_GROUPS, FILTER_LABELS, NewsFilterLabel, normalizeFilters } from '../lib/newsFilters';
+import {
+  DEFAULT_FILTERS,
+  FILTER_GROUPS,
+  FILTER_LABELS,
+  NewsFilterLabel,
+  PRESETS,
+  normalizeFilters,
+  presetLabel
+} from '../lib/newsFilters';
 
 export type FilterPanelProps = {
   selected: string[];
@@ -15,6 +23,10 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
   const selectedSet = new Set<NewsFilterLabel>(normalizedSelected);
   const hasSelection = normalizedSelected.length > 0;
   const hasAllSelected = normalizedSelected.length === FILTER_LABELS.length;
+
+  const presetEntries = Object.entries(PRESETS) as Array<
+    [keyof typeof PRESETS, NewsFilterLabel[]]
+  >;
 
   const handleToggle = (label: NewsFilterLabel) => {
     if (selectedSet.has(label)) {
@@ -36,6 +48,18 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
   const handleSelectAll = () => {
     onChange(normalizeFilters(FILTER_LABELS));
   };
+
+  const handleApplyPreset = (name: keyof typeof PRESETS) => {
+    const presetLabels = PRESETS[name] ?? [];
+    onChange(normalizeFilters(presetLabels));
+  };
+
+  const activePresetName = presetEntries.find(([, presetLabels]) => {
+    if (presetLabels.length !== normalizedSelected.length) {
+      return false;
+    }
+    return presetLabels.every((label) => selectedSet.has(label));
+  })?.[0];
 
   return (
     <aside
@@ -61,16 +85,42 @@ const FilterPanel = ({ selected, onChange, className }: FilterPanelProps) => {
           >
             Select all
           </button>
+        </div>
+      </header>
+      <section aria-label="Quick filter presets" className="mb-5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          Quick presets
+        </h3>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {presetEntries.map(([name]) => {
+            const isActive = activePresetName === name;
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => handleApplyPreset(name)}
+                aria-pressed={isActive}
+                className={clsx(
+                  'rounded-full border px-3 py-1 text-xs font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500',
+                  isActive
+                    ? 'border-sky-600 bg-sky-600 text-white dark:border-sky-400 dark:bg-sky-500'
+                    : 'border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800'
+                )}
+              >
+                {presetLabel(name)}
+              </button>
+            );
+          })}
           <button
             type="button"
             onClick={handleClearAll}
-            className="text-xs font-medium text-sky-600 underline-offset-4 transition hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
             disabled={!hasSelection}
+            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:opacity-60 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             Clear all
           </button>
         </div>
-      </header>
+      </section>
       <div className="space-y-6" role="group" aria-label="News filter groups">
         {Object.entries(FILTER_GROUPS).map(([groupLabel, labels]) => (
           <fieldset key={groupLabel} className="space-y-3">

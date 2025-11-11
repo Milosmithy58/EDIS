@@ -26,9 +26,10 @@ type Props = {
   rssUrl: string;
   filters: string[];
   onClearFilters: () => void;
+  onRemoveFilter: (label: string) => void;
 };
 
-const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters }: Props) => {
+const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters, onRemoveFilter }: Props) => {
   const trimmedRssUrl = rssUrl.trim();
   const hasCustomFeed = Boolean(trimmedRssUrl);
   const isValidFeed = hasCustomFeed
@@ -74,22 +75,34 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters }: Prop
     ],
     enabled: (hasCustomFeed && isValidFeed) || (Boolean(query) && Boolean(geo)),
     queryFn: async () => {
-      const params = new URLSearchParams();
       if (hasCustomFeed) {
+        const params = new URLSearchParams();
         params.set('rssUrl', trimmedRssUrl);
-      } else {
-        params.set('query', query);
-        if (countryCode) {
-          params.set('country', countryCode.toUpperCase());
-        }
-        if (hasFilters) {
-          params.set('filters', JSON.stringify(normalizedFilters));
-        }
         if (typeof ts === 'number') {
           params.set('ts', String(ts));
         }
+        const response = await fetch(`/api/news?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error('Failed to load news');
+        }
+        return response.json();
       }
-      const response = await fetch(`/api/news?${params.toString()}`);
+
+      const payload: { query: string; filters: string[]; country?: string; ts?: number } = {
+        query,
+        filters: normalizedFilters
+      };
+      if (countryCode) {
+        payload.country = countryCode.toUpperCase();
+      }
+      if (typeof ts === 'number') {
+        payload.ts = ts;
+      }
+      const response = await fetch('/api/news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
       if (!response.ok) {
         throw new Error('Failed to load news');
       }
@@ -192,10 +205,22 @@ const NewsCard = ({ geo, query, country, rssUrl, filters, onClearFilters }: Prop
       {shouldShowContent && data && (
         <div className="flex flex-1 flex-col gap-3 text-sm">
           {!hasCustomFeed && hasFilters && (
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-              <span>
-                Filtered by: {normalizedFilters.join(', ')}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-medium text-slate-600 dark:text-slate-300">Filtered by</span>
+                {normalizedFilters.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => onRemoveFilter(label)}
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 font-medium text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800"
+                    aria-label={`Remove filter ${label}`}
+                  >
+                    <span>{label}</span>
+                    <span aria-hidden="true">×</span>
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={onClearFilters}
