@@ -113,6 +113,61 @@ The server auto-detects the crime provider based on `country` (UK vs US). If the
 - Persistent state: the last successful `GeoContext` is restored from `localStorage`.
 - WCAG AA-friendly colors, focus outlines, and keyboard accessible lists/buttons.
 
+## Filtering news by safety topics
+
+The news card now supports topic filters so operators can zero in on
+high-impact incidents (crime, infrastructure, weather, travel, health).
+
+### Single source of truth
+
+- Frontend keywords live in [`apps/web/src/lib/newsFilters.ts`](apps/web/src/lib/newsFilters.ts).
+- The Express proxy mirrors the same map in
+  [`apps/server/src/adapters/news/filterKeywords.ts`](apps/server/src/adapters/news/filterKeywords.ts).
+- Update **both** files when you add or rename labels so the UI, cache keys, and
+  provider queries stay in sync.
+
+Each label maps to an array of synonyms that are OR-joined inside parentheses.
+Queries look like:
+
+```
+London, UK (flood OR flooding OR "flash flood" OR "river levels" OR deluge) OR (protest OR demonstration OR march OR strike OR picket)
+```
+
+### Data flow
+
+1. Users toggle checkboxes in the `FilterPanel` component. Selections persist to
+   `localStorage` (`edis.news.filters.v1`).
+2. The news React Query uses `serializeFilters()` to keep cache keys stable and
+   sends the active labels to `/api/news?filters=[...]`.
+3. The Express route sanitizes the labels, composes the provider query with
+   `buildFilterQuery()`, and forwards it to GNews/NewsAPI.
+4. React renders removable pills above the news list and exposes a “Clear all
+   filters” shortcut inside the card.
+
+### Porting to Wix (Velo)
+
+- Create `backend/edis/news.jsw` that accepts `{ query, country, filters }`.
+- Copy the `FILTER_KEYWORDS` map and helper used on the server. Call it from the
+  Wix module before invoking `wix-fetch`.
+- Fetch provider data with:
+
+  ```js
+  import { fetch } from 'wix-fetch';
+  import { getSecret } from 'wix-secrets-backend';
+
+  export async function news({ query, country, filters = [] }) {
+    const token = await getSecret('GNEWS_API_KEY');
+    const finalQuery = buildFilterQuery(query, filters);
+    const response = await fetch(
+      `https://gnews.io/api/v4/search?q=${encodeURIComponent(finalQuery)}&token=${token}&country=${country}`
+    );
+    return response.json();
+  }
+  ```
+
+- Store API keys in Wix Secrets Manager and reuse the React-side
+  serialization helpers to keep behaviour aligned.
+
 ## Adapter customization
 
 Adapters share normalized DTOs in `apps/server/src/core/types.ts`. To add a new provider:

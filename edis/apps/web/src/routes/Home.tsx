@@ -5,6 +5,14 @@ import WeatherCard from '../components/WeatherCard';
 import CrimeCard from '../components/CrimeCard';
 import NewsCard from '../components/NewsCard';
 import { COUNTRY_OPTIONS, getDefaultCountry } from '../lib/country';
+import FilterPanel from '../components/FilterPanel';
+import {
+  DEFAULT_FILTERS,
+  FILTER_STORAGE_KEY,
+  NewsFilterLabel,
+  normalizeFilters
+} from '../lib/newsFilters';
+import { useDebounce } from '../lib/useDebounce';
 
 const LAST_GEO_KEY = 'edis:last-geo';
 
@@ -18,6 +26,7 @@ const Home = () => {
   const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
   const [rssUrl, setRssUrl] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState<string[]>(DEFAULT_FILTERS);
 
   useEffect(() => {
     try {
@@ -33,6 +42,21 @@ const Home = () => {
       }
     } catch (error) {
       console.error('Failed to read stored location', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const rawFilters = localStorage.getItem(FILTER_STORAGE_KEY);
+      if (!rawFilters) {
+        return;
+      }
+      const parsed = JSON.parse(rawFilters);
+      if (Array.isArray(parsed)) {
+        setSelectedFilters(normalizeFilters(parsed));
+      }
+    } catch (error) {
+      console.error('Failed to read stored filters', error);
     }
   }, []);
 
@@ -56,11 +80,40 @@ const Home = () => {
     }
   }, [selectedGeo, country, rssUrl]);
 
+  useEffect(() => {
+    try {
+      const normalized = normalizeFilters(selectedFilters);
+      if (normalized.length === 0) {
+        localStorage.removeItem(FILTER_STORAGE_KEY);
+        return;
+      }
+      localStorage.setItem(FILTER_STORAGE_KEY, JSON.stringify(normalized));
+    } catch (error) {
+      console.error('Failed to persist news filters', error);
+    }
+  }, [selectedFilters]);
+
   const composedNewsQuery = useMemo(() => {
     if (!selectedGeo || rssUrl) return '';
     const segments = [selectedGeo.city, selectedGeo.admin1, selectedGeo.country];
     return segments.filter(Boolean).join(', ');
   }, [selectedGeo, rssUrl]);
+
+  const debouncedFilters = useDebounce(selectedFilters, 300);
+
+  const handleFiltersChange = (next: string[]) => {
+    setSelectedFilters(normalizeFilters(next));
+  };
+
+  const handleRemoveFilter = (label: NewsFilterLabel) => {
+    setSelectedFilters((prev) => prev.filter((item) => item !== label));
+  };
+
+  const handleClearFilters = () => {
+    setSelectedFilters([]);
+  };
+
+  const activeFilters = selectedFilters;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -138,10 +191,45 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-3">
-          <WeatherCard geo={selectedGeo} />
-          <CrimeCard geo={selectedGeo} country={country} />
-          <NewsCard geo={selectedGeo} query={composedNewsQuery} country={country} rssUrl={rssUrl} />
+        <section className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(240px,280px)_1fr]">
+          <FilterPanel selected={activeFilters} onChange={handleFiltersChange} />
+          <div className="flex flex-col gap-6">
+            <section className="grid gap-6 lg:grid-cols-3">
+              <WeatherCard geo={selectedGeo} />
+              <CrimeCard geo={selectedGeo} country={country} />
+              <div className="flex flex-col gap-4">
+                {activeFilters.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2" aria-label="Active news filters">
+                    {activeFilters.map((filter) => (
+                      <button
+                        key={filter}
+                        type="button"
+                        onClick={() => handleRemoveFilter(filter)}
+                        className="group inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700 transition hover:bg-sky-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:bg-sky-900/30 dark:text-sky-200 dark:hover:bg-sky-900/60"
+                      >
+                        <span>{filter}</span>
+                        <span
+                          aria-hidden="true"
+                          className="flex h-4 w-4 items-center justify-center rounded-full bg-sky-600 text-[10px] font-bold text-white group-hover:bg-sky-700"
+                        >
+                          ×
+                        </span>
+                        <span className="sr-only">Remove {filter}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <NewsCard
+                  geo={selectedGeo}
+                  query={composedNewsQuery}
+                  country={country}
+                  rssUrl={rssUrl}
+                  filters={debouncedFilters}
+                  onClearFilters={handleClearFilters}
+                />
+              </div>
+            </section>
+          </div>
         </section>
       </main>
     </div>
