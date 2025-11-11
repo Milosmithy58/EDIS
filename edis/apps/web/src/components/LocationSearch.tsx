@@ -34,18 +34,11 @@ const MIN_QUERY_LENGTH = 2;
 const LocationSearch = ({ country, onSelect }: Props) => {
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState<string>('city');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(query.trim());
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [query]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     setQuery('');
-    setDebouncedQuery('');
+    setSearchQuery('');
   }, [country]);
 
   const {
@@ -54,12 +47,12 @@ const LocationSearch = ({ country, onSelect }: Props) => {
     isError,
     refetch
   } = useQuery<GeocodeResponse>({
-    queryKey: ['geocode', debouncedQuery, country, scope],
-    enabled: debouncedQuery.length >= MIN_QUERY_LENGTH,
+    queryKey: ['geocode', searchQuery, country, scope],
+    enabled: searchQuery.length >= MIN_QUERY_LENGTH,
     staleTime: 1000 * 60,
     queryFn: async () => {
       const params = new URLSearchParams({
-        query: debouncedQuery,
+        query: searchQuery,
         country,
         scope
       });
@@ -75,7 +68,16 @@ const LocationSearch = ({ country, onSelect }: Props) => {
 
   const handleSelect = (geo: GeoContext) => {
     onSelect(geo);
-    setQuery(geo.query);
+    const formattedQuery = geo.query.trim();
+    setQuery(formattedQuery);
+    setSearchQuery(formattedQuery);
+  };
+
+  const handleSearch = () => {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length >= MIN_QUERY_LENGTH) {
+      setSearchQuery(trimmedQuery);
+    }
   };
 
   const handleUseMyLocation = () => {
@@ -127,12 +129,26 @@ const LocationSearch = ({ country, onSelect }: Props) => {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                handleSearch();
+              }
+            }}
             placeholder="Search for London, New York..."
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
             aria-autocomplete="list"
           />
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={query.trim().length < MIN_QUERY_LENGTH || isFetching}
+            className="rounded-lg border border-sky-500 px-3 py-2 text-sm font-medium text-sky-600 transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-200 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400 disabled:hover:bg-transparent dark:border-sky-400 dark:text-sky-300 dark:hover:bg-slate-800 dark:disabled:border-slate-700 dark:disabled:text-slate-500"
+          >
+            Search
+          </button>
           <select
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
             value={scope}
@@ -166,7 +182,7 @@ const LocationSearch = ({ country, onSelect }: Props) => {
             </button>
           </div>
         )}
-        {!isFetching && !isError && suggestions.length === 0 && debouncedQuery && (
+        {!isFetching && !isError && suggestions.length === 0 && searchQuery && (
           <p className="p-3 text-sm text-slate-500 dark:text-slate-300">No matches yet.</p>
         )}
         <ul role="listbox" className="divide-y divide-slate-100 dark:divide-slate-700">
