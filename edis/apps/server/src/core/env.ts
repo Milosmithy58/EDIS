@@ -53,7 +53,8 @@ export const env = EnvSchema.parse(process.env);
 
 export const flags = {
   openWeather: env.ENABLE_OPENWEATHER === 'true' && Boolean(env.OPENWEATHER_API_KEY),
-  newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY)
+  newsApi: env.ENABLE_NEWSAPI === 'true' && Boolean(env.NEWSAPI_API_KEY),
+  weatherProvider: env.WEATHER_PROVIDER
 };
 
 export const newsProvider = env.NEWS_PROVIDER;
