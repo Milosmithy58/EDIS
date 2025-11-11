@@ -1,4 +1,5 @@
 import { env } from '../../core/env';
+import { getKey } from '../../core/secrets/secureStore';
 import { fetchJson, toQueryString } from '../../core/fetcher';
 import { NewsDTO } from '../../core/types';
 
@@ -20,7 +21,8 @@ type NewsApiResponse = {
 };
 
 export const getNews = async (query: string, country?: string): Promise<NewsDTO> => {
-  if (!env.NEWSAPI_API_KEY) {
+  const apiKey = (await getKey('newsapi')) ?? env.NEWSAPI_API_KEY;
+  if (!apiKey) {
     throw new Error('NEWSAPI_API_KEY missing.');
   }
   const params = toQueryString({
@@ -30,7 +32,7 @@ export const getNews = async (query: string, country?: string): Promise<NewsDTO>
   });
   const payload = await fetchJson<NewsApiResponse>(`${BASE_URL}?${params}`, {
     headers: {
-      'X-Api-Key': env.NEWSAPI_API_KEY
+      'X-Api-Key': apiKey
     }
   });
   return {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import LocationSearch, { GeoContext } from '../components/LocationSearch';
 import WeatherCard from '../components/WeatherCard';
@@ -17,7 +17,11 @@ type StoredState = {
   rssUrl?: string;
 };
 
-const Home = () => {
+type HomeProps = {
+  adminNav?: ReactNode;
+};
+
+const Home = ({ adminNav }: HomeProps) => {
   const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
   const [rssUrl, setRssUrl] = useState('');
@@ -107,11 +111,14 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">EDIS</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-300">
-            Emergency Disaster Incident System
-          </p>
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">EDIS</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-300">
+              Emergency Disaster Incident System
+            </p>
+          </div>
+          {adminNav ? <div className="flex items-center gap-3">{adminNav}</div> : null}
         </div>
       </header>
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6">

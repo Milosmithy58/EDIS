@@ -1,4 +1,5 @@
 import { env } from '../../core/env';
+import { getKey } from '../../core/secrets/secureStore';
 import { GeoContext, WeatherDTO } from '../../core/types';
 
 export type VisualCrossingUnits = 'us' | 'uk' | 'metric';
@@ -85,21 +86,20 @@ export const buildLocationString = (geo: GeoContext): string => {
 export const buildUrl = ({
   loc,
   units,
+  apiKey,
   include = 'current,hours,days,alerts'
 }: {
   loc: string;
   units: VisualCrossingUnits;
+  apiKey: string;
   include?: string;
 }): string => {
-  if (!env.VISUALCROSSING_API_KEY) {
-    throw new Error('VISUALCROSSING_API_KEY missing. Set the key before using Visual Crossing.');
-  }
   const unitGroup = normalizeUnits(units);
   const query = [
     `unitGroup=${encodeURIComponent(unitGroup)}`,
     `include=${include}`,
     'lang=en',
-    `key=${encodeURIComponent(env.VISUALCROSSING_API_KEY)}`
+    `key=${encodeURIComponent(apiKey)}`
   ].join('&');
   const encodedLoc = encodeURI(loc);
   return `${BASE_URL}/timeline/${encodedLoc}?${query}`;
@@ -170,11 +170,12 @@ export const getWeatherVC = async (
   geo: GeoContext,
   units: VisualCrossingUnits = 'metric'
 ): Promise<WeatherDTO> => {
-  if (!env.VISUALCROSSING_API_KEY) {
+  const apiKey = (await getKey('visualcrossing')) ?? env.VISUALCROSSING_API_KEY;
+  if (!apiKey) {
     throw new Error('VISUALCROSSING_API_KEY missing. Set the key before using Visual Crossing.');
   }
   const loc = buildLocationString(geo);
-  const url = buildUrl({ loc, units });
+  const url = buildUrl({ loc, units, apiKey });
   const response = await fetch(url, {
     headers: {
       Accept: 'application/json'

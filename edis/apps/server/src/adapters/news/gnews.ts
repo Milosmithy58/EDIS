@@ -1,4 +1,5 @@
 import { env } from '../../core/env';
+import { getKey } from '../../core/secrets/secureStore';
 import { fetchJson, toQueryString } from '../../core/fetcher';
 import { NewsDTO } from '../../core/types';
 
@@ -20,13 +21,14 @@ type GNewsResponse = {
 };
 
 export const getNews = async (query: string, country?: string): Promise<NewsDTO> => {
-  if (!env.GNEWS_API_KEY) {
+  const apiKey = (await getKey('gnews')) ?? env.GNEWS_API_KEY;
+  if (!apiKey) {
     throw new Error('GNEWS_API_KEY missing.');
   }
   const params = toQueryString({
     q: query,
     country: country?.toLowerCase(),
-    token: env.GNEWS_API_KEY,
+    token: apiKey,
     lang: 'en',
     max: 10
   });
