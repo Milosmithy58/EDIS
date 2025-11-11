@@ -38,11 +38,11 @@ vi.mock('../adapters/news/rss', () => ({
 vi.mock('../adapters/news/webzio', () => ({
   fetchNewsWebz: fetchNewsWebzMock,
   NewsProviderError: class extends Error {
+    status: number;
     constructor(readonly dto = { message: 'error', status: 429, retryable: true }) {
       super('NewsProviderError');
       this.name = 'NewsProviderError';
-      // Mimic the real class shape used by the route handler.
-      (this as any).status = dto.status;
+      this.status = dto.status;
     }
   }
 }));
@@ -88,5 +88,21 @@ describe('GET /api/news', () => {
     expect(response.status).toBe(200);
     expect(fetchNewsWebzMock).toHaveBeenCalledWith({ baseQuery: '', filters: [], nextUrl: 'https://api.webz.io/newsApiLite?token=abc123&from=cursor' });
     expect(response.body).toEqual({ items: [], source: 'webz.io', next: undefined });
+  });
+});
+
+describe('POST /api/news', () => {
+  it('composes filter clauses and forwards them for gnews', async () => {
+    const app = await loadApp();
+    const response = await request(app)
+      .post('/api/news')
+      .send({ query: 'London, UK', filters: ['Flooding', 'Civil Unrest / Protests'], country: 'gb' });
+
+    expect(response.status).toBe(200);
+    expect(gnewsMock).toHaveBeenCalledTimes(1);
+    const [providerQuery] = gnewsMock.mock.calls[0];
+    expect(providerQuery).toContain('(flood OR flooding');
+    expect(providerQuery).toContain(') OR (');
+    expect(providerQuery).toContain('(protest OR demonstration');
   });
 });

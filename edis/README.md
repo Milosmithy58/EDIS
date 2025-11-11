@@ -52,6 +52,10 @@ Keys are optional unless you enable the related adapters. The defaults (Open-Met
 - Start the stack with `npm run dev:all`, then visit `http://localhost:5173/admin-login` and enter the admin token. The in-memory session unlocks the **Admin → API Keys** screen.
 - Use the write-only form to rotate provider credentials. Keys are encrypted with AES-256-GCM and stored at `KEYS_STORE_PATH`; the raw secrets never appear in responses or logs.
 - Existing adapters (Visual Crossing, NewsAPI, GNews) pull credentials from the secure store at runtime. If the store is empty on first run, any values from `.env` seed the encrypted file.
+- After saving a key you can click **Test connection** to invoke `POST /api/admin/test`.
+  The endpoint performs a lightweight provider call and responds with
+  `{ ok, details: { status, providerLatencyMs } }`, helping you confirm credentials
+  without exposing the secret value.
 
 ### Wix (Velo)
 
@@ -141,6 +145,11 @@ The server auto-detects the crime provider based on `country` (UK vs US). If the
   `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/London,UK?unitGroup=metric&include=current,hours,days,alerts&lang=en&key=YOUR_KEY`.
 - The adapter normalizes current, hourly (24 hours), and daily (7 days) forecasts into our shared `WeatherDTO`.
 - Configure a different provider by setting `WEATHER_PROVIDER` to `openmeteo` or `openweather`.
+- When no Visual Crossing key is stored (secure store or `.env`), the route automatically
+  falls back to Open-Meteo and tags the JSON payload with `meta.source = "openmeteo"`
+  so the UI can display the active data source.
+- The weather card renders a small “Data source” label sourced from the API response so
+  operators can confirm which upstream service is in use.
 
 ### Client UX notes
 
@@ -166,6 +175,10 @@ and `is_first:true`).
   [`apps/server/src/adapters/news/filterKeywords.ts`](apps/server/src/adapters/news/filterKeywords.ts).
 - Update **both** files when you add or rename labels so the UI, cache keys, and
   provider queries stay in sync.
+- Quick-apply presets live alongside the keywords in
+  [`apps/web/src/lib/newsFilters.ts`](apps/web/src/lib/newsFilters.ts) as the exported
+  `PRESETS` map. Updating those arrays changes the dashboard chips instantly; the
+  server will ignore any unknown labels if you remove or rename a preset entry.
 
 Each label maps to an array of synonyms that are OR-joined inside parentheses.
 Queries look like:
@@ -173,6 +186,27 @@ Queries look like:
 ```
 London, UK (flood OR flooding OR "flash flood" OR "river levels" OR deluge) OR (protest OR demonstration OR march OR strike OR picket)
 ```
+
+### Calling `/api/news`
+
+The server still supports `GET /api/news`, but `POST /api/news` keeps long filter
+lists out of the query string. Submit the location query, optional ISO country code,
+and filters in the JSON body:
+
+```bash
+curl -X POST http://localhost:4000/api/news \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "query": "London, UK",
+    "country": "GB",
+    "filters": ["Flooding", "Civil Unrest / Protests"],
+    "ts": 1704067200000
+  }'
+```
+
+The response matches the GET payload shape. Pagination continues to use the
+`next` cursor with `GET /api/news?next=...`. Unknown or outdated filter labels are
+safely ignored by the server so you can phase presets in or out without errors.
 
 ### Data flow
 

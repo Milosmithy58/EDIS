@@ -9,6 +9,13 @@ type Status = {
   message: string;
 };
 
+type TestDetails = {
+  status: string;
+  providerLatencyMs?: number;
+  httpStatus?: number;
+  message?: string;
+};
+
 const PROVIDER_LABELS: Record<Provider, string> = {
   visualcrossing: 'Visual Crossing',
   newsapi: 'NewsAPI',
@@ -78,7 +85,7 @@ const AdminKeys = () => {
 
   useEffect(() => {
     if (status.tone !== 'idle' && status.message && statusRef.current) {
-      statusRef.current.focus();
+      statusRef.current.scrollIntoView({ block: 'nearest' });
     }
   }, [status]);
 
@@ -149,10 +156,42 @@ const AdminKeys = () => {
         setStatus({ tone: 'error', message });
         return;
       }
-      const payload = (await response.json()) as { ok: boolean; details?: string };
+      const payload = (await response.json()) as { ok: boolean; details?: TestDetails };
+      const formatStatus = () => {
+        const details = payload.details;
+        if (!details) {
+          return payload.ok ? 'Provider test succeeded.' : 'Provider test failed.';
+        }
+        const parts: string[] = [];
+        const friendlyStatus = (() => {
+          switch (details.status) {
+            case 'ok':
+              return 'Connection OK';
+            case 'missing-key':
+              return 'No key stored';
+            case 'http-error':
+              return 'Provider HTTP error';
+            case 'network-error':
+              return 'Network error';
+            default:
+              return details.status.replace(/[-_]/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+          }
+        })();
+        parts.push(friendlyStatus);
+        if (typeof details.httpStatus === 'number') {
+          parts.push(`HTTP ${details.httpStatus}`);
+        }
+        if (typeof details.providerLatencyMs === 'number') {
+          parts.push(`${Math.round(details.providerLatencyMs)} ms`);
+        }
+        if (details.message) {
+          parts.push(details.message);
+        }
+        return parts.join(' · ');
+      };
       setStatus({
         tone: payload.ok ? 'success' : 'error',
-        message: payload.details ?? (payload.ok ? 'Provider test succeeded.' : 'Provider test failed.')
+        message: formatStatus()
       });
     } catch (error) {
       setStatus({ tone: 'error', message: 'Unexpected error while testing the key.' });
@@ -232,7 +271,6 @@ const AdminKeys = () => {
           </form>
           <p
             ref={statusRef}
-            tabIndex={status.tone === 'idle' || !status.message ? -1 : 0}
             role="status"
             aria-live="polite"
             className={`mt-6 rounded-lg border px-4 py-3 text-sm focus:outline-none ${

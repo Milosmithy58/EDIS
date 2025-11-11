@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import * as openMeteo from '../adapters/weather/openmeteo';
+import { getWeatherOM } from '../adapters/weather/openmeteo';
+import type { GeoContext } from '../core/types';
 
 afterEach(() => {
   vi.resetAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe('open-meteo adapter', () => {
@@ -41,7 +43,14 @@ describe('open-meteo adapter', () => {
       } as unknown as Response)
     );
 
-    const result = await openMeteo.getWeather(51.5, -0.12);
+    const geo: GeoContext = {
+      query: 'London',
+      country: 'UK',
+      countryCode: 'GB',
+      lat: 51.5,
+      lon: -0.12
+    };
+    const result = await getWeatherOM(geo, 'metric');
     expect(result.current.tempC).toBe(12.3);
     expect(result.current.windKph).toBe(5);
     expect(result.current.conditions).toContain('Partly');

@@ -88,8 +88,9 @@ export const loadKeys = async (): Promise<ProviderKeys> => {
     cachedKeys = keys;
     hasLoaded = true;
     return { ...keys };
-  } catch (error: any) {
-    if (error?.code === 'ENOENT') {
+  } catch (error: unknown) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError?.code === 'ENOENT') {
       const seeds = seedFromEnv();
       await writeFile(seeds);
       cachedKeys = seeds;
@@ -98,8 +99,8 @@ export const loadKeys = async (): Promise<ProviderKeys> => {
     }
     const isCryptoFailure =
       error instanceof SyntaxError ||
-      error?.code === 'ERR_OSSL_EVP_BAD_DECRYPT' ||
-      (error instanceof Error && /authenticate data/i.test(error.message));
+      (nodeError?.code === 'ERR_OSSL_EVP_BAD_DECRYPT' ||
+        (error instanceof Error && /authenticate data/i.test(error.message)));
     if (isCryptoFailure) {
       throw new Error('Failed to decrypt secrets store. Check SECRETBOX_KEY and key store integrity.');
     }

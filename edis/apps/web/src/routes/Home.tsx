@@ -108,6 +108,10 @@ const Home = ({ adminNav }: HomeProps) => {
     setSelectedFilters([]);
   };
 
+  const handleRemoveFilter = (label: string) => {
+    setSelectedFilters((prev) => normalizeFilters(prev.filter((item) => item !== label)));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
@@ -201,6 +205,7 @@ const Home = ({ adminNav }: HomeProps) => {
                   rssUrl={rssUrl}
                   filters={debouncedFilters}
                   onClearFilters={handleClearFilters}
+                  onRemoveFilter={handleRemoveFilter}
                 />
               </div>
             </section>

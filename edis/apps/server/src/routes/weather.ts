@@ -3,7 +3,8 @@ import etag from 'etag';
 import { LRUCache } from 'lru-cache';
 import { env, flags } from '../core/env';
 import { GeoContext, WeatherDTO } from '../core/types';
-import * as openMeteo from '../adapters/weather/openmeteo';
+import { getKey } from '../core/secrets/secureStore';
+import { getWeatherOM } from '../adapters/weather/openmeteo';
 import * as openWeather from '../adapters/weather/openweather';
 import { getWeatherVC, VisualCrossingUnits } from '../adapters/weather/visualcrossing';
 
@@ -12,6 +13,12 @@ const cache = new LRUCache<string, WeatherDTO>({ max: 200, ttl: 1000 * 60 * 5 })
 const router = Router();
 
 const allowedUnits: VisualCrossingUnits[] = ['metric', 'us', 'uk'];
+
+const SOURCE_LABELS: Record<string, string> = {
+  visualcrossing: 'Visual Crossing',
+  openmeteo: 'Open-Meteo',
+  openweather: 'OpenWeather'
+};
 
 const normalizeUnits = (unitsQuery?: string, countryCodeOrName?: string): VisualCrossingUnits => {
   if (unitsQuery && allowedUnits.includes(unitsQuery as VisualCrossingUnits)) {
@@ -31,6 +38,47 @@ const normalizeUnits = (unitsQuery?: string, countryCodeOrName?: string): Visual
   return 'metric';
 };
 
+const resolveWeatherProvider = async (): Promise<'visualcrossing' | 'openmeteo' | 'openweather'> => {
+  const forced = flags.weatherProvider ?? env.WEATHER_PROVIDER ?? 'visualcrossing';
+
+  if (forced === 'openmeteo' || forced === 'openweather') {
+    return forced;
+  }
+
+  if (forced === 'visualcrossing') {
+    try {
+      const storedKey = await getKey('visualcrossing');
+      if (storedKey && storedKey.trim().length > 0) {
+        return 'visualcrossing';
+      }
+    } catch (error) {
+      console.warn('Unable to read Visual Crossing key from secure store', error);
+    }
+    if (env.VISUALCROSSING_API_KEY?.trim()) {
+      return 'visualcrossing';
+    }
+    return 'openmeteo';
+  }
+
+  return 'visualcrossing';
+};
+
+const attachSourceMetadata = (weather: WeatherDTO, source: 'visualcrossing' | 'openmeteo' | 'openweather') => {
+  const label = SOURCE_LABELS[source] ?? source;
+  if (weather.meta) {
+    weather.meta = {
+      ...weather.meta,
+      source,
+      sourceLabel: weather.meta.sourceLabel ?? label
+    };
+  } else {
+    weather.meta = {
+      source,
+      sourceLabel: label
+    };
+  }
+};
+
 router.get('/', async (req, res) => {
   const { lat, lon, city, admin1, country, countryCode, units: unitsQuery } = req.query as Record<
     string,
@@ -41,7 +89,7 @@ router.get('/', async (req, res) => {
     return;
   }
   const normalizedUnits = normalizeUnits(unitsQuery, countryCode ?? country);
-  const provider = flags.weatherProvider ?? env.WEATHER_PROVIDER ?? 'visualcrossing';
+  const provider = await resolveWeatherProvider();
   const cacheKey = `${lat},${lon},${normalizedUnits},${provider}`;
   if (cache.has(cacheKey)) {
     const cached = cache.get(cacheKey)!;
@@ -59,8 +107,6 @@ router.get('/', async (req, res) => {
     let weather: WeatherDTO;
     if (provider === 'openweather') {
       weather = await openWeather.getWeather(Number(lat), Number(lon));
-    } else if (provider === 'openmeteo') {
-      weather = await openMeteo.getWeather(Number(lat), Number(lon));
     } else {
       const geo: GeoContext = {
         query: '',
@@ -71,8 +117,13 @@ router.get('/', async (req, res) => {
         lat: Number(lat),
         lon: Number(lon)
       };
-      weather = await getWeatherVC(geo, normalizedUnits);
+      if (provider === 'openmeteo') {
+        weather = await getWeatherOM(geo, normalizedUnits);
+      } else {
+        weather = await getWeatherVC(geo, normalizedUnits);
+      }
     }
+    attachSourceMetadata(weather, provider === 'openmeteo' ? 'openmeteo' : provider);
     cache.set(cacheKey, weather);
     const body = JSON.stringify(weather);
     const tag = etag(body);

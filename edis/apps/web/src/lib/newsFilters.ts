@@ -96,6 +96,41 @@ export const DEFAULT_FILTERS: NewsFilterLabel[] = [];
 
 export const FILTER_STORAGE_KEY = 'edis.news.filters.v1';
 
+export const PRESETS: Record<string, NewsFilterLabel[]> = {
+  severeWeather: [
+    'Storm / High Winds',
+    'Flooding',
+    'Snow / Ice / Blizzard',
+    'Lightning / Thunderstorms',
+    'Wildfire / Smoke',
+    'Extreme Heat / Cold'
+  ],
+  unrestTransport: [
+    'Civil Unrest / Protests',
+    'Public Disorder',
+    'Road Accidents / Closures',
+    'Rail / Tube Disruption',
+    'Airport / Flight Delays',
+    'Public Transport Strike / Protest'
+  ],
+  cyberFraud: ['Cybercrime', 'Fraud & Scams']
+};
+
+export const presetLabel = (name: string): string => {
+  switch (name) {
+    case 'severeWeather':
+      return 'Severe Weather';
+    case 'unrestTransport':
+      return 'Unrest + Transport';
+    case 'cyberFraud':
+      return 'Cyber & Fraud';
+    default:
+      return name
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+};
+
 export const normalizeFilters = (filters: string[]): NewsFilterLabel[] => {
   const seen = new Set<NewsFilterLabel>();
   const normalized: NewsFilterLabel[] = [];

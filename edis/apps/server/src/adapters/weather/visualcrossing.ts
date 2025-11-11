@@ -105,16 +105,26 @@ export const buildUrl = ({
   return `${BASE_URL}/timeline/${encodedLoc}?${query}`;
 };
 
+type VisualCrossingDataPoint = Record<string, unknown>;
+
+type VisualCrossingPayload = {
+  currentConditions?: VisualCrossingDataPoint;
+  days?: VisualCrossingDataPoint[];
+  hours?: VisualCrossingDataPoint[];
+};
+
 export const mapToDTO = (
-  payload: any,
+  payload: VisualCrossingPayload,
   units: VisualCrossingUnits,
   requestUrl?: string
 ): WeatherDTO => {
   const unitGroup = normalizeUnits(units);
   const current = payload?.currentConditions ?? {};
-  const days: Array<any> = Array.isArray(payload?.days) ? payload.days : [];
-  const hourlyTopLevel: Array<any> = Array.isArray(payload?.hours) ? payload.hours : [];
-  const hourlyFromDays = days.flatMap((day) => (Array.isArray(day?.hours) ? day.hours : []));
+  const days: VisualCrossingDataPoint[] = Array.isArray(payload?.days) ? payload.days : [];
+  const hourlyTopLevel: VisualCrossingDataPoint[] = Array.isArray(payload?.hours) ? payload.hours : [];
+  const hourlyFromDays = days.flatMap((day) =>
+    Array.isArray(day?.hours) ? (day.hours as VisualCrossingDataPoint[]) : []
+  );
   const hours = (hourlyTopLevel.length > 0 ? hourlyTopLevel : hourlyFromDays).slice(0, 24);
   const updatedISO = toIsoString(current.datetimeEpoch ?? current.datetime);
 
