@@ -40,6 +40,12 @@ app.use(
   })
 );
 
+app.get('/', (_req, res) => {
+  res.status(200).json({
+    message: 'EDIS API is running. Refer to /healthz for status and /api/* for resources.'
+  });
+});
+
 app.get('/healthz', (req, res) => {
   res.json({ status: 'ok' });
 });
