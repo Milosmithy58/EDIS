@@ -79,7 +79,7 @@ Copy the example file and fill in any API keys you have available:
 cp .env.example .env
 ```
 
-Keys are optional unless you enable the related adapters. The defaults (Open-Meteo, UK Police, Webz.io) require a `WEBZIO_TOKEN`.
+Keys are optional unless you enable the related adapters. Because Webz.io is the default news provider, supply a `WEBZIO_TOKEN` or override `NEWS_PROVIDER` to `gnews`/`newsapi` when you don't have credentials yet.
 
 | Variable | Description |
 | --- | --- |

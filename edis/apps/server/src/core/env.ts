@@ -40,9 +40,11 @@ if (process.env.NODE_ENV === 'test') {
   process.env.KEYS_STORE_PATH ??= './secrets/test-keys.enc';
   process.env.SCRAPE_SOURCES_PATH ??= './secrets/test-sources.enc';
   process.env.GEOCODER_PROVIDER ??= 'nominatim';
+  process.env.WEBZIO_TOKEN ??= 'test-webzio-token';
 }
 
-const EnvSchema = z.object({
+export const EnvSchema = z
+  .object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ADMIN_TOKEN: z.string().min(12, 'ADMIN_TOKEN must be set and at least 12 characters long'),
@@ -57,11 +59,20 @@ const EnvSchema = z.object({
   FBI_CRIME_API_KEY: z.string().optional(),
   ENABLE_OPENWEATHER: z.string().optional(),
   ENABLE_NEWSAPI: z.string().optional(),
-  NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('gnews'),
+  NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('webzio'),
   WEATHER_PROVIDER: z.enum(['visualcrossing', 'openmeteo', 'openweather']).optional(),
   WEBZIO_TOKEN: z.string().optional(),
   VISUALCROSSING_API_KEY: z.string().optional()
-});
+  })
+  .superRefine((value, ctx) => {
+    if (value.NEWS_PROVIDER === 'webzio' && !value.WEBZIO_TOKEN) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['WEBZIO_TOKEN'],
+        message: 'WEBZIO_TOKEN is required when NEWS_PROVIDER=webzio.'
+      });
+    }
+  });
 
 export const env = EnvSchema.parse(process.env);
 
@@ -72,7 +83,3 @@ export const flags = {
 };
 
 export const newsProvider = env.NEWS_PROVIDER;
-
-if (newsProvider === 'webzio' && !env.WEBZIO_TOKEN) {
-  throw new Error('WEBZIO_TOKEN is required when NEWS_PROVIDER=webzio.');
-}
