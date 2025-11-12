@@ -10,6 +10,7 @@ import newsRouter from './routes/news';
 import adminRouter from './routes/admin';
 import femaRouter from './routes/fema';
 import ticketsRouter from './routes/tickets';
+import placesRouter from './routes/places';
 import { env } from './core/env';
 import crimeNewsRoutes from './routes/crimeNewsRoutes';
 
@@ -61,6 +62,7 @@ app.use('/api', crimeNewsRoutes);
 app.use('/api/admin', adminRouter);
 app.use('/api/fema', femaRouter);
 app.use('/api/tickets', ticketsRouter);
+app.use('/api/places', placesRouter);
 
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   void _next;

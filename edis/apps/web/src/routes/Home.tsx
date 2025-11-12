@@ -9,6 +9,7 @@ import NewsCard from '../components/NewsCard';
 import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import LocalTicketsCard from '../components/LocalTicketsCard';
 import FilterPanel from '../components/FilterPanel';
+import PlacesPanel from '../components/PlacesPanel';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
 import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
@@ -218,6 +219,8 @@ const Home = ({ adminNav }: HomeProps) => {
               <LocalTicketsCard geo={selectedGeo} />
             </div>
           </section>
+
+          <PlacesPanel address={selectedGeo?.query} />
         </section>
       </main>
       {isFilterOpen ? (
