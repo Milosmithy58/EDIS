@@ -211,16 +211,48 @@ const parseFeedItems = (xml: string) => {
   return items;
 };
 
+const decodeEntities = (value: string) =>
+  value
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&apos;/gi, "'");
+
+const resolveRelativeUrl = (href: string, domain: string) => {
+  try {
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      return new URL(href).toString();
+    }
+    const base = new URL(`https://${domain}`);
+    return new URL(href, base).toString();
+  } catch (error) {
+    return href;
+  }
+};
+
 const parseAnchors = (html: string, domain: string) => {
-  const results: Array<{ title: string; url: string; summary: string; publishedAt: string }> = [];
+  const results: Array<{ title: string; url: string; summary: string; publishedAt: string; image?: string }> = [];
   const anchorRegex = /<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
   while ((match = anchorRegex.exec(html))) {
     const href = match[1];
-    const text = match[2].replace(/<[^>]+>/g, '').trim();
+    const text = decodeEntities(match[2].replace(/<[^>]+>/g, '').trim());
     if (!href || !text) continue;
-    if (!href.startsWith('http')) continue;
-    results.push({ title: text, url: href, summary: text, publishedAt: new Date().toISOString(), source: domain });
+    const url = resolveRelativeUrl(href, domain);
+    if (!url.startsWith('http')) continue;
+
+    const imageMatch = match[0].match(/<img[^>]+(?:src|data-src|data-original|data-thumbnail)="([^"]+)"[^>]*>/i);
+    const image = imageMatch ? resolveRelativeUrl(imageMatch[1], domain) : undefined;
+
+    results.push({
+      title: text,
+      url,
+      summary: text,
+      image,
+      publishedAt: new Date().toISOString()
+    });
   }
   return results;
 };
