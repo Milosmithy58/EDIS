@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl, { type AnyLayer, type AnySourceData } from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
 import type { GeoContext } from './LocationSearch';
 
 const MAP_ZOOM_LEVEL = 12;
