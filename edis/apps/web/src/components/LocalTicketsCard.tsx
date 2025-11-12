@@ -123,8 +123,6 @@ const LocalTicketsCard = ({ geo }: Props) => {
     return state.data.tickets ?? [];
   }, [state]);
 
-  const sourceErrors = state.status === 'success' ? state.data.source_errors ?? [] : [];
-
   return (
     <article
       className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900"
@@ -210,19 +208,6 @@ const LocalTicketsCard = ({ geo }: Props) => {
             );
           })}
         </ul>
-      )}
-      {geo && sourceErrors.length > 0 && (
-        <section className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-          <h3 className="mb-1 font-semibold">Some sources are unavailable</h3>
-          <ul className="list-disc pl-4">
-            {sourceErrors.map((error, index) => (
-              <li key={`${error.source ?? 'unknown'}-${index}`}>
-                {error.source ? `${error.source}: ` : ''}
-                {error.message}
-              </li>
-            ))}
-          </ul>
-        </section>
       )}
     </article>
   );

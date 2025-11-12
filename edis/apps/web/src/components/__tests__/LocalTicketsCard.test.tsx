@@ -64,24 +64,4 @@ describe('LocalTicketsCard', () => {
     });
   });
 
-  it('lists source errors when provided', async () => {
-    const payload = {
-      tickets: [],
-      source_errors: [
-        { message: 'Forbidden', source: 'tfl', status: 403 }
-      ]
-    };
-    vi.spyOn(global, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify(payload), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    );
-
-    render(<LocalTicketsCard geo={geo} />);
-    await waitFor(() => {
-      expect(screen.getByText(/some sources are unavailable/i)).toBeInTheDocument();
-    });
-    expect(screen.getByText(/tfl: forbidden/i)).toBeInTheDocument();
-  });
 });
