@@ -47,6 +47,24 @@ export type CrimeDTO = {
   total: number;
   source: string;
   url?: string;
+  topLocations?: Array<{
+    name: string;
+    count: number;
+  }>;
+  outcomesByCategory?: Array<{
+    category: string;
+    count: number;
+  }>;
+  force?: {
+    id: string;
+    name?: string;
+    url?: string | null;
+    neighbourhood?: {
+      id: string;
+      name?: string;
+      url?: string | null;
+    } | null;
+  } | null;
 };
 
 export type NewsDTO = {
