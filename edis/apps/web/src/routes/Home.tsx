@@ -10,6 +10,7 @@ import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import LocalTicketsCard from '../components/LocalTicketsCard';
 import FilterPanel from '../components/FilterPanel';
 import PlacesPanel from '../components/PlacesPanel';
+import MapboxTabs from '../components/MapboxTabs';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
 import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
@@ -221,6 +222,15 @@ const Home = ({ adminNav }: HomeProps) => {
           </section>
 
           <PlacesPanel address={selectedGeo?.query} />
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Map</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
+              Toggle overlays to explore live traffic, points of interest, and transit context on demand.
+            </p>
+            <div className="mt-4">
+              <MapboxTabs />
+            </div>
+          </section>
         </section>
       </main>
       {isFilterOpen ? (
