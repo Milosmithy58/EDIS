@@ -181,6 +181,16 @@ edis/
 
 Each provider adapter is isolated to `apps/server/src/adapters/**` so we can swap APIs quickly.
 
+### Nearby Critical Services (OSM)
+• Shows three nearest **Airports**, **Hospitals**, **Police** for searched address.<br />
+• Data source: OpenStreetMap (Nominatim + Overpass).<br />
+• Each result includes a **Directions** button (Google Maps route).<br />
+
+Server env vars:<br />
+PLACES_SEARCH_RADIUS_KM=50<br />
+OSM_NOMINATIM_URL=https://nominatim.openstreetmap.org/search<br />
+OSM_OVERPASS_URL=https://overpass-api.de/api/interpreter
+
 ### Default providers
 
 | Domain | Default adapter | Optional alternative |
