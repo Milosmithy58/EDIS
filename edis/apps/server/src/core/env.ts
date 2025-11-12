@@ -57,6 +57,7 @@ export const EnvSchema = z
   OPENWEATHER_API_KEY: z.string().optional(),
   MAPBOX_TOKEN: z.string().optional(),
   FBI_CRIME_API_KEY: z.string().optional(),
+  LESSCRIME_DATASET_URL: z.string().url().optional(),
   ENABLE_OPENWEATHER: z.string().optional(),
   ENABLE_NEWSAPI: z.string().optional(),
   NEWS_PROVIDER: z.enum(['gnews', 'newsapi', 'webzio']).default('webzio'),
