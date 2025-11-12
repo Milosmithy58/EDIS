@@ -81,6 +81,22 @@ cp .env.example .env
 
 Keys are optional unless you enable the related adapters. Because Webz.io is the default news provider, supply a `WEBZIO_TOKEN` or override `NEWS_PROVIDER` to `gnews`/`newsapi` when you don't have credentials yet.
 
+#### Updating `.env` from the command line
+
+When you already have concrete credential values, you can create or update the server workspace `.env` in one shot. From the repository root run:
+
+```bash
+cd edis/apps/server
+cat <<'EOF' >> .env
+ADMIN_TOKEN="your-admin-token"
+SECRETBOX_KEY="your-base64-secretbox-key"
+WEBZIO_TOKEN="your-webzio-token"
+VISUALCROSSING_API_KEY="your-visualcrossing-api-key"
+EOF
+```
+
+The `>>` operator appends to the existing file (creating it if needed). Adjust the placeholder values with your real keys. If you prefer to overwrite the file instead of appending, switch `>>` to `>`. After editing, restart the backend so the new environment variables are loaded.
+
 | Variable | Description |
 | --- | --- |
 | `WEBZIO_TOKEN` | Required when `NEWS_PROVIDER=webzio` (Webz.io News API Lite). |
