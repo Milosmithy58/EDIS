@@ -22,13 +22,12 @@ type NewsDTO = {
 type Props = {
   geo: GeoContext | null;
   query: string;
-  country: string;
   filters: string[];
   onClearFilters: () => void;
   onRemoveFilter: (label: string) => void;
 };
 
-const NewsCard = ({ geo, query, country, filters, onClearFilters, onRemoveFilter }: Props) => {
+const NewsCard = ({ geo, query, filters, onClearFilters, onRemoveFilter }: Props) => {
   const normalizedFilters = normalizeFilters(filters);
   const serializedFilters = serializeFilters(filters);
   const hasFilters = normalizedFilters.length > 0;
@@ -39,7 +38,7 @@ const NewsCard = ({ geo, query, country, filters, onClearFilters, onRemoveFilter
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
 
-  const countryCode = useMemo(() => geo?.countryCode ?? country, [geo?.countryCode, country]);
+  const countryCode = useMemo(() => geo?.countryCode?.toUpperCase(), [geo?.countryCode]);
 
   const {
     data,
@@ -65,7 +64,7 @@ const NewsCard = ({ geo, query, country, filters, onClearFilters, onRemoveFilter
         filters: normalizedFilters
       };
       if (countryCode) {
-        payload.country = countryCode.toUpperCase();
+        payload.country = countryCode;
       }
       if (typeof ts === 'number') {
         payload.ts = ts;

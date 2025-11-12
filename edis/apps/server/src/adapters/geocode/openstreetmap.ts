@@ -49,18 +49,15 @@ const buildGeoContext = (item: OsmSearchResult): GeoContext => {
 
 type SearchOptions = {
   query: string;
-  country?: string;
-  scope?: string;
   limit?: number;
 };
 
-export const search = async ({ query, country, scope, limit = 5 }: SearchOptions) => {
+export const search = async ({ query, limit = 5 }: SearchOptions) => {
   const params = toQueryString({
     q: query,
     format: 'jsonv2',
     addressdetails: 1,
     limit,
-    countrycodes: country?.toLowerCase(),
     dedupe: 1
   });
   const results = await fetchJson<OsmSearchResult[]>(`${BASE_URL}/search?${params}`, {
@@ -69,26 +66,7 @@ export const search = async ({ query, country, scope, limit = 5 }: SearchOptions
       Accept: 'application/json'
     }
   });
-  const matchesScope = (item: OsmSearchResult) => {
-    const type = item.type ?? '';
-    const address = item.address ?? {};
-
-    if (!scope) return true;
-
-    if (scope === 'country') {
-      return type === 'country' || Boolean(address.country);
-    }
-
-    if (scope === 'admin') {
-      const adminMatch = address.state || address.county || address.region || address.state_district;
-      return ['state', 'county', 'administrative', 'region', 'province'].includes(type) || Boolean(adminMatch);
-    }
-
-    const cityLike = address.city || address.town || address.village || address.hamlet || address.municipality;
-    return ['city', 'town', 'village', 'hamlet', 'municipality', 'administrative'].includes(type) || Boolean(cityLike);
-  };
-
-  return results.filter(matchesScope).map(buildGeoContext);
+  return results.map(buildGeoContext);
 };
 
 type ReverseOptions = {

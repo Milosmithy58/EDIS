@@ -16,24 +16,33 @@ type CrimeDTO = {
 
 type Props = {
   geo: GeoContext | null;
-  country: string;
 };
 
-const CrimeCard = ({ geo, country }: Props) => {
+const CrimeCard = ({ geo }: Props) => {
+  const country = useMemo(() => {
+    const code = geo?.countryCode?.toUpperCase();
+    if (!code) return undefined;
+    if (code === 'GB' || code === 'UK') return 'UK';
+    if (code === 'US' || code === 'USA') return 'US';
+    return code;
+  }, [geo?.countryCode]);
+
   const {
     data,
     isFetching,
     isError,
     refetch
   } = useQuery<CrimeDTO | { message: string }>({
-    queryKey: ['crime', geo?.lat, geo?.lon, country, geo?.admin1, geo?.city],
+    queryKey: ['crime', geo?.lat, geo?.lon, country ?? 'unknown', geo?.admin1, geo?.city],
     enabled: Boolean(geo),
     queryFn: async () => {
       const params = new URLSearchParams({
-        country,
         lat: String(geo!.lat),
         lon: String(geo!.lon)
       });
+      if (country) {
+        params.append('country', country);
+      }
       if (geo?.admin1) params.append('admin1', geo.admin1);
       if (geo?.city) params.append('city', geo.city);
       const response = await fetch(`/api/crime?${params.toString()}`);

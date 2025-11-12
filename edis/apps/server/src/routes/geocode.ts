@@ -13,8 +13,8 @@ const router = Router();
 
 router.get('/', async (req, res) => {
   try {
-    const { query, country, scope, lat, lon } = req.query as Record<string, string>;
-    const cacheKey = JSON.stringify({ query, country, scope, lat, lon });
+    const { query, lat, lon } = req.query as Record<string, string>;
+    const cacheKey = JSON.stringify({ query, lat, lon });
     if (cache.has(cacheKey)) {
       const cached = cache.get(cacheKey)!;
       const body = JSON.stringify(cached);
@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
     if (lat && lon) {
       results = await osm.reverse({ lat: Number(lat), lon: Number(lon) });
     } else if (query) {
-      results = await osm.search({ query, country, scope: scope ?? 'city' });
+      results = await osm.search({ query });
     } else {
       res.status(400).json({ message: 'query or coordinates required', status: 400 });
       return;
