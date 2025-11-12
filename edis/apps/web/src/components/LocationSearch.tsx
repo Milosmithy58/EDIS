@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
@@ -15,7 +15,6 @@ export type GeoContext = {
 };
 
 type Props = {
-  country: string;
   onSelect: (geo: GeoContext | null) => void;
 };
 
@@ -23,23 +22,11 @@ type GeocodeResponse = {
   results: GeoContext[];
 };
 
-const SCOPE_OPTIONS = [
-  { label: 'City / Town', value: 'city' },
-  { label: 'County / State', value: 'admin', description: 'Counties (UK) or States (US)' },
-  { label: 'Country', value: 'country' }
-];
-
 const MIN_QUERY_LENGTH = 2;
 
-const LocationSearch = ({ country, onSelect }: Props) => {
+const LocationSearch = ({ onSelect }: Props) => {
   const [query, setQuery] = useState('');
-  const [scope, setScope] = useState<string>('city');
   const [searchQuery, setSearchQuery] = useState('');
-
-  useEffect(() => {
-    setQuery('');
-    setSearchQuery('');
-  }, [country]);
 
   const {
     data,
@@ -47,14 +34,12 @@ const LocationSearch = ({ country, onSelect }: Props) => {
     isError,
     refetch
   } = useQuery<GeocodeResponse>({
-    queryKey: ['geocode', searchQuery, country, scope],
+    queryKey: ['geocode', searchQuery],
     enabled: searchQuery.length >= MIN_QUERY_LENGTH,
     staleTime: 1000 * 60,
     queryFn: async () => {
       const params = new URLSearchParams({
-        query: searchQuery,
-        country,
-        scope
+        query: searchQuery
       });
       const response = await fetch(`/api/geocode?${params.toString()}`);
       if (!response.ok) {
@@ -135,7 +120,7 @@ const LocationSearch = ({ country, onSelect }: Props) => {
                 handleSearch();
               }
             }}
-            placeholder="Search for London, New York..."
+            placeholder="Search for Canada, Paris, or 1600 Pennsylvania Ave..."
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
             aria-autocomplete="list"
           />
@@ -149,18 +134,6 @@ const LocationSearch = ({ country, onSelect }: Props) => {
           >
             Search
           </button>
-          <select
-            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
-            value={scope}
-            onChange={(event) => setScope(event.target.value)}
-            aria-label="Location scope"
-          >
-            {SCOPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
           <button
             type="button"
             onClick={handleUseMyLocation}

@@ -8,7 +8,6 @@ import CrimeNewsCard from '../components/CrimeNewsCard';
 import NewsCard from '../components/NewsCard';
 import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import LocalTicketsCard from '../components/LocalTicketsCard';
-import { COUNTRY_OPTIONS, getDefaultCountry } from '../lib/country';
 import FilterPanel from '../components/FilterPanel';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
 import { resolveUsStateCode } from '../lib/usStates';
@@ -17,7 +16,6 @@ import { useDebounce } from '../lib/useDebounce';
 const LAST_GEO_KEY = 'edis:last-geo';
 
 type StoredState = {
-  country: string;
   geo?: GeoContext;
 };
 
@@ -26,7 +24,6 @@ type HomeProps = {
 };
 
 const Home = ({ adminNav }: HomeProps) => {
-  const [country, setCountry] = useState<string>(getDefaultCountry());
   const [selectedGeo, setSelectedGeo] = useState<GeoContext | null>(null);
   const [selectedFilters, setSelectedFilters] = useState<string[]>(DEFAULT_FILTERS);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -36,9 +33,6 @@ const Home = ({ adminNav }: HomeProps) => {
       const raw = localStorage.getItem(LAST_GEO_KEY);
       if (!raw) return;
       const parsed: StoredState = JSON.parse(raw);
-      if (parsed.country) {
-        setCountry(parsed.country);
-      }
       setSelectedGeo(parsed.geo ?? null);
     } catch (error) {
       console.error('Failed to read stored location', error);
@@ -66,7 +60,7 @@ const Home = ({ adminNav }: HomeProps) => {
         localStorage.removeItem(LAST_GEO_KEY);
         return;
       }
-      const payload: StoredState = { country };
+      const payload: StoredState = {};
       if (selectedGeo) {
         payload.geo = selectedGeo;
       }
@@ -75,7 +69,7 @@ const Home = ({ adminNav }: HomeProps) => {
       console.error('Failed to persist location', error);
       toast.error('Unable to save your last location.');
     }
-  }, [selectedGeo, country]);
+  }, [selectedGeo]);
 
   useEffect(() => {
     try {
@@ -183,31 +177,11 @@ const Home = ({ adminNav }: HomeProps) => {
             Find an area
           </h2>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-            Search by town, city, county, or state. Results power the weather, crime, and news cards below.
+            Search by country, region, city, or a specific address. Results power the weather, crime, and news cards below.
           </p>
           <div className="mt-4 flex flex-col gap-4">
-            <div className="w-full lg:w-1/4">
-              <label
-                className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300"
-                htmlFor="country-select"
-              >
-                Country
-              </label>
-              <select
-                id="country-select"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-800"
-                value={country}
-                onChange={(event) => setCountry(event.target.value)}
-              >
-                {COUNTRY_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
             <div className="w-full">
-              <LocationSearch country={country} onSelect={setSelectedGeo} />
+              <LocationSearch onSelect={setSelectedGeo} />
             </div>
             <LocationMap geo={selectedGeo} />
           </div>
@@ -230,12 +204,11 @@ const Home = ({ adminNav }: HomeProps) => {
           </div>
           <section className="grid gap-6 lg:grid-cols-3">
             <WeatherCard geo={selectedGeo} />
-            <CrimeCard geo={selectedGeo} country={country} />
+            <CrimeCard geo={selectedGeo} />
             <div className="flex flex-col gap-4">
               <NewsCard
                 geo={selectedGeo}
                 query={composedNewsQuery}
-                country={country}
                 filters={debouncedFilters}
                 onClearFilters={handleClearFilters}
                 onRemoveFilter={handleRemoveFilter}
