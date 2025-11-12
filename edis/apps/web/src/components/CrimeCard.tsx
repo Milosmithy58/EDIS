@@ -12,6 +12,24 @@ type CrimeDTO = {
   total: number;
   source: string;
   url?: string;
+  topLocations?: Array<{
+    name: string;
+    count: number;
+  }>;
+  outcomesByCategory?: Array<{
+    category: string;
+    count: number;
+  }>;
+  force?: {
+    id: string;
+    name?: string;
+    url?: string | null;
+    neighbourhood?: {
+      id: string;
+      name?: string;
+      url?: string | null;
+    } | null;
+  } | null;
 };
 
 type Props = {
@@ -126,6 +144,42 @@ const CrimeCard = ({ geo }: Props) => {
         <div className="flex flex-1 flex-col gap-3 text-sm">
           <p className="text-3xl font-semibold text-slate-900 dark:text-slate-100">{data.total.toLocaleString()}</p>
           <p className="text-xs text-slate-500">Incidents in {data.period}</p>
+          {data.force && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <p className="font-semibold text-slate-700 dark:text-slate-200">Local policing team</p>
+              <p className="mt-1 text-slate-600 dark:text-slate-300">
+                {data.force.url ? (
+                  <a
+                    href={data.force.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-600 underline"
+                  >
+                    {data.force.name ?? data.force.id}
+                  </a>
+                ) : (
+                  data.force.name ?? data.force.id
+                )}
+              </p>
+              {data.force.neighbourhood && (
+                <p className="mt-1 text-slate-600 dark:text-slate-300">
+                  Neighbourhood:{' '}
+                  {data.force.neighbourhood.url ? (
+                    <a
+                      href={data.force.neighbourhood.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-600 underline"
+                    >
+                      {data.force.neighbourhood.name ?? data.force.neighbourhood.id}
+                    </a>
+                  ) : (
+                    data.force.neighbourhood.name ?? data.force.neighbourhood.id
+                  )}
+                </p>
+              )}
+            </div>
+          )}
           {chart}
           <ul className="mt-2 space-y-1 text-xs">
             {data.totalsByCategory.map((item) => (
@@ -135,6 +189,32 @@ const CrimeCard = ({ geo }: Props) => {
               </li>
             ))}
           </ul>
+          {data.topLocations && data.topLocations.length > 0 && (
+            <div>
+              <h3 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Top streets</h3>
+              <ul className="mt-2 space-y-1 text-xs">
+                {data.topLocations.map((item) => (
+                  <li key={item.name} className="flex justify-between">
+                    <span>{item.name}</span>
+                    <span className="font-medium">{item.count.toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {data.outcomesByCategory && data.outcomesByCategory.length > 0 && (
+            <div>
+              <h3 className="mt-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Case outcomes</h3>
+              <ul className="mt-2 space-y-1 text-xs">
+                {data.outcomesByCategory.map((item) => (
+                  <li key={item.category} className="flex justify-between">
+                    <span>{item.category}</span>
+                    <span className="font-medium">{item.count.toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {shouldShowUkCrimeMap && (
             <div className="mt-4 space-y-2">
               <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-800">

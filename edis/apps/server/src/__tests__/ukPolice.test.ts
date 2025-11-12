@@ -12,11 +12,13 @@ describe('UK Police adapter', () => {
       {
         ok: true,
         json: async () => [
-          { category: 'anti-social-behaviour' },
-          { category: 'anti-social-behaviour' },
-          { category: 'burglary' }
+          { category: 'anti-social-behaviour', location: { street: { name: 'High Street' } } },
+          { category: 'anti-social-behaviour', location: { street: { name: 'High Street' } } },
+          { category: 'burglary', location: { street: { name: 'Market Road' } } }
         ]
-      }
+      },
+      { ok: true, json: async () => [] },
+      { ok: true, json: async () => null }
     ];
     vi.stubGlobal(
       'fetch',
@@ -31,6 +33,10 @@ describe('UK Police adapter', () => {
     expect(data.totalsByCategory).toEqual([
       { category: 'anti-social-behaviour', count: 2 },
       { category: 'burglary', count: 1 }
+    ]);
+    expect(data.topLocations).toEqual([
+      { name: 'High Street', count: 2 },
+      { name: 'Market Road', count: 1 }
     ]);
   });
 });
