@@ -58,6 +58,10 @@ const CrimeCard = ({ geo }: Props) => {
     return data.totalsByCategory.slice(0, 6);
   }, [data]);
 
+  const shouldShowUkCrimeMap = country === 'UK' && Boolean(geo);
+  const ukCrimeMapUrl =
+    'https://www.police.uk/pu/your-area/metropolitan-police-service/junction/?tab=CrimeMap';
+
   const chart = useMemo(() => {
     if (!chartData || chartData.length === 0) return null;
     const width = 280;
@@ -131,6 +135,30 @@ const CrimeCard = ({ geo }: Props) => {
               </li>
             ))}
           </ul>
+          {shouldShowUkCrimeMap && (
+            <div className="mt-4 space-y-2">
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <iframe
+                  src={ukCrimeMapUrl}
+                  title="UK crime map"
+                  className="h-64 w-full"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+              <p className="text-xs text-slate-500">
+                Crime map provided by{' '}
+                <a
+                  href="https://www.police.uk/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-600 underline"
+                >
+                  police.uk
+                </a>
+              </p>
+            </div>
+          )}
           <p className="mt-auto text-xs text-slate-500">
             Source:{' '}
             {data.url ? (
