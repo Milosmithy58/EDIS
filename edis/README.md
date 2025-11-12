@@ -106,7 +106,8 @@ The `>>` operator appends to the existing file (creating it if needed). Adjust t
 | `OPENWEATHER_API_KEY` | Used when enabling the optional OpenWeather provider. |
 | `VISUALCROSSING_API_KEY` | Required for the Visual Crossing weather adapter. |
 | `MAPBOX_TOKEN` | Optional geocoding provider. |
-| `FBI_CRIME_API_KEY` | Required for US crime stats. |
+| `FBI_CRIME_API_KEY` | Optional fallback for US crime stats (LessCrime data is default). |
+| `LESSCRIME_DATASET_URL` | Override the LessCrime CSV endpoint (defaults to the hosted package URL). |
 | `DEFAULT_COUNTRY` | Fallback for ambiguous searches (defaults to `UK`). |
 | `ENABLE_OPENWEATHER` | Legacy flag for the OpenWeather adapter (prefer `WEATHER_PROVIDER`). |
 | `ENABLE_NEWSAPI` | Set to `true` to switch the news provider. |
@@ -212,7 +213,7 @@ OSM_OVERPASS_URL=https://overpass-api.de/api/interpreter
 | Domain | Default adapter | Optional alternative |
 | --- | --- | --- |
 | Weather | Visual Crossing Timeline API | Open-Meteo (`WEATHER_PROVIDER=openmeteo`) or OpenWeather (`WEATHER_PROVIDER=openweather` + key) |
-| Crime | UK Police (by lat/lon) | FBI Crime Data (requires state + key) |
+| Crime | UK Police (UK) / LessCrime Crime Data (US) | FBI Crime Data fallback (requires state + key) |
 | News | Webz.io News API Lite | GNews (`NEWS_PROVIDER=gnews`) or NewsAPI (requires `ENABLE_NEWSAPI=true` + key) |
 
 The server auto-detects the crime provider based on `country` (UK vs US). If the provider can’t answer the request, the UI displays a friendly message with retry guidance.
@@ -433,7 +434,7 @@ $w.onReady(async function () {
 ### Crime provider note
 
 - UK crime data uses the same `data.police.uk` endpoint with `lat/lon` parameters.
-- US crime data requires a state abbreviation and the FBI API key.
+- US crime data uses the LessCrime dataset by default and still requires a state abbreviation. Provide an FBI API key to enable the fallback adapter if the dataset is unreachable.
 - Ensure your Wix UI sets the correct `country` so the backend knows which adapter to call.
 
 ## Smoke test locations
@@ -441,7 +442,7 @@ $w.onReady(async function () {
 Try these queries to validate the stack:
 
 - “London, UK” (UK weather + UK crime + GNews headlines)
-- “New York, US” (US weather + FBI crime when configured + news)
+- “New York, US” (US weather + LessCrime crime stats (FBI fallback when configured) + news)
 
 ## Contributing
 

@@ -3,6 +3,7 @@ import etag from 'etag';
 import { LRUCache } from 'lru-cache';
 import { CrimeDTO } from '../core/types';
 import * as ukPolice from '../adapters/crime/ukPolice';
+import * as lessCrime from '../adapters/crime/lessCrime';
 import * as fbiCrime from '../adapters/crime/fbiCrime';
 
 const cache = new LRUCache<string, CrimeDTO | { message: string }>({ max: 200, ttl: 1000 * 60 * 10 });
@@ -92,12 +93,17 @@ router.get('/', async (req, res) => {
       } else {
         const stateCode = STATE_ABBR[admin1] ?? admin1.toUpperCase();
         try {
-          payload = await fbiCrime.getCrimeForState(stateCode);
-        } catch (error) {
-          console.error(error);
-          payload = {
-            message: 'FBI crime data is unavailable. Check API key configuration.'
-          };
+          payload = await lessCrime.getCrimeForState(stateCode);
+        } catch (lessCrimeError) {
+          console.error('crime:lesscrime', lessCrimeError);
+          try {
+            payload = await fbiCrime.getCrimeForState(stateCode);
+          } catch (fbiError) {
+            console.error('crime:fbi', fbiError);
+            payload = {
+              message: 'U.S. crime data is unavailable right now. Please try again later.'
+            };
+          }
         }
       }
     } else {
