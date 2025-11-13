@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { GeoContext } from './LocationSearch';
 import { formatDateTime } from '../lib/format';
 import { normalizeFilters, serializeFilters } from '../lib/newsFilters';
-import { buildMockNewsFeed } from 'mocks/news';
+import { buildMockNewsFeed } from '../mocks/news';
 import type { NewsDTO } from 'types/news';
 
 type Props = {
