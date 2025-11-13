@@ -51,7 +51,7 @@ describe('CrimeCard', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTitle(/UK crime map/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /open map on police.uk/i })).toBeInTheDocument();
     });
   });
 
@@ -87,7 +87,7 @@ describe('CrimeCard', () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByTitle(/UK crime map/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: /open map on police.uk/i })).not.toBeInTheDocument();
     });
   });
 
