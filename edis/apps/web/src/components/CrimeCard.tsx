@@ -217,14 +217,22 @@ const CrimeCard = ({ geo }: Props) => {
           )}
           {shouldShowUkCrimeMap && (
             <div className="mt-4 space-y-2">
-              <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                <iframe
-                  src={ukCrimeMapUrl}
-                  title="UK crime map"
-                  className="h-64 w-full"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">View the full crime map</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                  The interactive police.uk map can&apos;t be embedded because of their security policy. Open it in a
+                  separate tab to explore recent incidents in detail.
+                </p>
+                <div className="mt-3">
+                  <a
+                    href={ukCrimeMapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+                  >
+                    Open map on police.uk
+                  </a>
+                </div>
               </div>
               <p className="text-xs text-slate-500">
                 Crime map provided by{' '}
