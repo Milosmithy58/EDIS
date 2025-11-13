@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { buildMockPlacesResponse } from 'mocks/places';
+import { buildMockPlacesResponse } from '../../mocks/places';
 import type { PlacesResponse } from 'types/places';
 
 export function usePlaces(address?: string) {
