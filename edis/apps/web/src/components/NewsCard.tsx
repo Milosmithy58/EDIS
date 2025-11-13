@@ -3,21 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { GeoContext } from './LocationSearch';
 import { formatDateTime } from '../lib/format';
 import { normalizeFilters, serializeFilters } from '../lib/newsFilters';
-
-type NewsDTO = {
-  items: Array<{
-    title: string;
-    url: string;
-    source: string;
-    publishedAtISO: string;
-    imageUrl?: string;
-  }>;
-  total?: number;
-  source: string;
-  next?: string;
-  notice?: string;
-  cached?: boolean;
-};
+import { buildMockNewsFeed } from 'mocks/news';
+import type { NewsDTO } from 'types/news';
 
 type Props = {
   geo: GeoContext | null;
@@ -69,15 +56,32 @@ const NewsCard = ({ geo, query, filters, onClearFilters, onRemoveFilter }: Props
       if (typeof ts === 'number') {
         payload.ts = ts;
       }
-      const response = await fetch('/api/news', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) {
-        throw new Error('Failed to load news');
+
+      try {
+        const response = await fetch('/api/news', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || 'Failed to load news');
+        }
+        return (await response.json()) as NewsDTO;
+      } catch (error) {
+        console.warn('Falling back to mock news feed', error);
+        return buildMockNewsFeed({
+          query,
+          filters: normalizedFilters,
+          location: geo
+            ? {
+                city: geo.city,
+                admin1: geo.admin1,
+                countryCode: geo.countryCode
+              }
+            : undefined
+        });
       }
-      return response.json();
     }
   });
 
