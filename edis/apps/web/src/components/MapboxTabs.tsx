@@ -77,12 +77,7 @@ export default function MapboxTabs({
   const tokenMissing = !MAPBOX_TOKEN;
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) {
-      return;
-    }
-
-    if (tokenMissing) {
-      console.error('Mapbox access token not configured. Set VITE_MAPBOX_TOKEN.');
+    if (tokenMissing || !containerRef.current || mapRef.current) {
       return;
     }
 
@@ -109,6 +104,14 @@ export default function MapboxTabs({
       setMapLoaded(false);
     };
   }, [initialLat, initialLng, initialZoom, tokenMissing]);
+
+  useEffect(() => {
+    if (!tokenMissing) {
+      return;
+    }
+
+    console.warn('Mapbox access token not configured. Set VITE_MAPBOX_TOKEN.');
+  }, [tokenMissing]);
 
   const hideTraffic = useCallback(() => {
     const map = mapRef.current;

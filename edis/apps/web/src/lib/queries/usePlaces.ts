@@ -1,21 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-
-type PlaceCategory = 'airport' | 'hospital' | 'police';
-
-type NearbyPlace = {
-  id: string;
-  name: string;
-  category: PlaceCategory;
-  lat: number;
-  lon: number;
-  address?: string;
-  distance_m: number;
-};
-
-type PlacesResponse = {
-  origin: { lat: number; lon: number };
-  results: Record<PlaceCategory, NearbyPlace[]>;
-};
+import { buildMockPlacesResponse } from 'mocks/places';
+import type { PlacesResponse } from 'types/places';
 
 export function usePlaces(address?: string) {
   return useQuery<PlacesResponse>({
@@ -24,14 +9,20 @@ export function usePlaces(address?: string) {
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       const params = new URLSearchParams({ address: address ?? '' });
-      const response = await fetch(`/api/places?${params.toString()}`);
 
-      if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Places request failed (${response.status})`);
+      try {
+        const response = await fetch(`/api/places?${params.toString()}`);
+
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || `Places request failed (${response.status})`);
+        }
+
+        return (await response.json()) as PlacesResponse;
+      } catch (error) {
+        console.warn('Using mock places data', error);
+        return buildMockPlacesResponse(address ?? '');
       }
-
-      return response.json() as Promise<PlacesResponse>;
     }
   });
 }
