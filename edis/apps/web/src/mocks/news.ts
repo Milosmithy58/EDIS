@@ -47,7 +47,7 @@ export function buildMockNewsFeed(options: BuildMockNewsOptions): NewsDTO {
     items: personalizedItems,
     total: personalizedItems.length,
     source: 'Sample news feed',
-    notice: `Showing cached demo headlines for ${locationLabel} (${filterLabel}).`,
+    notice: undefined,
     cached: true,
     fetchedAt: new Date().toISOString(),
     next: undefined
