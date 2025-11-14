@@ -124,14 +124,6 @@ const Home = ({ adminNav }: HomeProps) => {
     return fallback && fallback.length > 0 ? fallback : undefined;
   }, [selectedGeo, femaStateCode]);
 
-  const handleClearFilters = () => {
-    setSelectedFilters([]);
-  };
-
-  const handleRemoveFilter = (label: string) => {
-    setSelectedFilters((prev) => normalizeFilters(prev.filter((item) => item !== label)));
-  };
-
   useEffect(() => {
     if (!isFilterOpen) {
       return;
@@ -212,8 +204,6 @@ const Home = ({ adminNav }: HomeProps) => {
                 geo={selectedGeo}
                 query={composedNewsQuery}
                 filters={debouncedFilters}
-                onClearFilters={handleClearFilters}
-                onRemoveFilter={handleRemoveFilter}
               />
               <CrimeNewsCard location={selectedGeo ? composedNewsQuery : ''} />
               <FemaIncidentsCard state={femaStateCode} county={femaCounty} />
