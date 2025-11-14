@@ -14,6 +14,7 @@ import MapboxTabs from '../components/MapboxTabs';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
 import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
+import WorldClockBar from '../components/WorldClockBar';
 
 const LAST_GEO_KEY = 'edis:last-geo';
 
@@ -162,6 +163,7 @@ const Home = ({ adminNav }: HomeProps) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <WorldClockBar geo={selectedGeo} />
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div>
