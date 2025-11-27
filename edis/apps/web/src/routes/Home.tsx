@@ -14,7 +14,7 @@ import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/ne
 import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
 import WorldClockBar from '../components/WorldClockBar';
-import { NavLink } from '../lib/navigation';
+import { Link } from 'react-router-dom';
 import { createExportFilename, downloadElementAsDocx, downloadElementAsPdf } from '../lib/download';
 
 const LAST_GEO_KEY = 'edis:last-geo';
@@ -212,12 +212,12 @@ const Home = ({ adminNav }: HomeProps) => {
             >
               Download DOCX
             </button>
-            <NavLink
+            <Link
               to="/trip-planner"
               className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-600 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2 focus:ring-offset-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
             >
               Trip planner
-            </NavLink>
+            </Link>
             {adminNav}
           </div>
         </div>

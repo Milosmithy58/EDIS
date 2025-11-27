@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
+import cookieParser from 'cookie-parser';
 import geocodeRouter from './routes/geocode';
 import weatherRouter from './routes/weather';
 import crimeRouter from './routes/crime';
@@ -15,20 +16,26 @@ import { env } from './core/env';
 import crimeNewsRoutes from './routes/crimeNewsRoutes';
 import { scrapeRouter } from './routes/scrape';
 import { configRouter } from './routes/config';
+import authRouter from './routes/auth';
+import { initAuthStore } from './core/authStore';
 
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
 const app = express();
 
+void initAuthStore();
+
 app.use(
   cors({
     origin: ['http://localhost:5173'],
-    methods: ['GET', 'POST', 'OPTIONS'],
+    methods: ['GET', 'POST', 'OPTIONS', 'PATCH', 'DELETE'],
+    credentials: true,
     maxAge: 600
   })
 );
 
 app.use(express.json({ limit: '16kb' }));
+app.use(cookieParser());
 
 app.use(
   rateLimit({
@@ -56,6 +63,7 @@ app.get('/healthz', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api', authRouter);
 app.use('/api/geocode', geocodeRouter);
 app.use('/api/weather', weatherRouter);
 app.use('/api/crime', crimeRouter);

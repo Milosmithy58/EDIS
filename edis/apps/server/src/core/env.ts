@@ -48,6 +48,7 @@ export const EnvSchema = z
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   ADMIN_TOKEN: z.string().min(12, 'ADMIN_TOKEN must be set and at least 12 characters long'),
+  AUTH_JWT_SECRET: z.string().min(16, 'AUTH_JWT_SECRET must be set and at least 16 characters long'),
   SECRETBOX_KEY: z.string().min(1, 'SECRETBOX_KEY must be a base64-encoded 32-byte key'),
   KEYS_STORE_PATH: z.string().default('./secrets/keys.enc'),
   SCRAPE_SOURCES_PATH: z.string().default('./secrets/sources.enc'),
