@@ -1,10 +1,11 @@
-import type { Request, RequestHandler } from 'express';
+import type { Request } from 'express';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { env } from '../core/env';
 import { getKey, setKey } from '../core/secrets/secureStore';
 import type { ProviderName } from '../core/secrets/types';
 import adminSourcesRouter from './adminSources';
+import { requireAdmin } from '../core/authMiddleware';
 
 const PROVIDERS: ProviderName[] = ['visualcrossing', 'newsapi', 'gnews'];
 type Provider = ProviderName;
@@ -28,20 +29,6 @@ const testLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
-
-export const requireAdmin: RequestHandler = (req, res, next) => {
-  const header = req.header('Authorization');
-  if (!header?.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'Unauthorized', status: 401 });
-    return;
-  }
-  const token = header.slice('Bearer '.length).trim();
-  if (!token || token !== env.ADMIN_TOKEN) {
-    res.status(401).json({ message: 'Unauthorized', status: 401 });
-    return;
-  }
-  next();
-};
 
 type TestDetails = {
   status: string;

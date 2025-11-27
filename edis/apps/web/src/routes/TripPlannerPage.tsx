@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { NavLink } from '../lib/navigation';
+import { Link } from 'react-router-dom';
 import TripSegmentRow from '../components/trip/TripSegmentRow';
 import TripPlannerMap from '../components/trip/TripPlannerMap';
 import TripDirectionsPanel from '../components/trip/TripDirectionsPanel';
@@ -203,12 +203,12 @@ const TripPlannerPage = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <NavLink
+            <Link
               to="/"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               ← Back to dashboard
-            </NavLink>
+            </Link>
             <button
               type="button"
               onClick={() => handleDownload('pdf')}
