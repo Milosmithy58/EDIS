@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { useGoogleMapsApi } from '../lib/useGoogleMapsApi';
+import { ParsedPlaceResult, usePlacesAutocomplete } from '../lib/placesAutocomplete';
 
 export type GeoContext = {
   query: string;
@@ -27,6 +29,8 @@ const MIN_QUERY_LENGTH = 2;
 const LocationSearch = ({ onSelect }: Props) => {
   const [query, setQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const { googleMaps } = useGoogleMapsApi();
 
   const {
     data,
@@ -50,6 +54,33 @@ const LocationSearch = ({ onSelect }: Props) => {
   });
 
   const suggestions = useMemo(() => data?.results ?? [], [data]);
+
+  const handlePlaceSelected = useCallback(
+    (place: ParsedPlaceResult) => {
+      setQuery(place.description);
+      setSearchQuery('');
+
+      if (place.lat === undefined || place.lng === undefined) {
+        toast.error('We could not read coordinates for that place. Please try another search.');
+        return;
+      }
+
+      const geo: GeoContext = {
+        query: place.description,
+        country: place.country ?? place.description,
+        countryCode: place.countryCode ?? '',
+        admin1: place.region,
+        city: place.city,
+        lat: place.lat,
+        lon: place.lng,
+      };
+
+      onSelect(geo);
+    },
+    [onSelect],
+  );
+
+  usePlacesAutocomplete({ googleMaps, inputRef, onPlaceSelect: handlePlaceSelected });
 
   const handleSelect = (geo: GeoContext) => {
     onSelect(geo);
@@ -112,6 +143,7 @@ const LocationSearch = ({ onSelect }: Props) => {
           <input
             id="location-search"
             type="search"
+            ref={inputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
