@@ -56,6 +56,8 @@ export const EnvSchema = z
   NEWSAPI_API_KEY: z.string().optional(),
   OPENWEATHER_API_KEY: z.string().optional(),
   MAPBOX_TOKEN: z.string().optional(),
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+  VITE_GOOGLE_MAPS_API_KEY: z.string().optional(),
   FBI_CRIME_API_KEY: z.string().optional(),
   LESSCRIME_DATASET_URL: z.string().url().optional(),
   ENABLE_OPENWEATHER: z.string().optional(),

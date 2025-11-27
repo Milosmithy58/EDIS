@@ -198,7 +198,7 @@ const TripPlannerPage = () => {
             <p className="text-sm uppercase tracking-wide text-slate-500 dark:text-slate-400">EDIS</p>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Trip planner</h1>
             <p className="text-sm text-slate-500 dark:text-slate-300">
-              Plan multi-stop journeys and visualize them on a live Mapbox map.
+              Plan multi-stop journeys and visualize them on a live Google Map.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

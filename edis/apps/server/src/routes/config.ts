@@ -2,10 +2,10 @@ import { Router } from 'express';
 
 export const configRouter = Router();
 
-configRouter.get('/mapbox-token', (_req, res) => {
-  const token = process.env.MAPBOX_TOKEN || process.env.VITE_MAPBOX_TOKEN;
-  if (!token) {
-    return res.status(500).json({ code: 'NO_TOKEN', message: 'Mapbox token not set' });
+configRouter.get('/google-maps-key', (_req, res) => {
+  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY;
+  if (!key) {
+    return res.status(500).json({ code: 'NO_KEY', message: 'Google Maps API key not set' });
   }
-  res.json({ token });
+  res.json({ key });
 });

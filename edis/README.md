@@ -105,7 +105,7 @@ The `>>` operator appends to the existing file (creating it if needed). Adjust t
 | `NEWSAPI_API_KEY` | Used when enabling the optional NewsAPI provider. |
 | `OPENWEATHER_API_KEY` | Used when enabling the optional OpenWeather provider. |
 | `VISUALCROSSING_API_KEY` | Required for the Visual Crossing weather adapter. |
-| `MAPBOX_TOKEN` | Optional geocoding provider. |
+| `GOOGLE_MAPS_API_KEY` | Required for Google Maps rendering on the frontend. |
 | `FBI_CRIME_API_KEY` | Optional fallback for US crime stats (LessCrime data is default). |
 | `LESSCRIME_DATASET_URL` | Override the LessCrime CSV endpoint (defaults to the hosted package URL). |
 | `DEFAULT_COUNTRY` | Fallback for ambiguous searches (defaults to `UK`). |
@@ -446,8 +446,8 @@ Try these queries to validate the stack:
 
 ## Trip planner
 
-- The web app now includes a `/trip-planner` page for building multi-stop journeys with Mapbox visualization.
-- Provide a `VITE_MAPBOX_TOKEN` in your environment (or configure the backend token endpoint) to render maps locally.
+- The web app now includes a `/trip-planner` page for building multi-stop journeys with Google Maps visualization.
+- Provide a `VITE_GOOGLE_MAPS_API_KEY` in your environment (or configure the backend token endpoint) to render maps locally.
 
 ## Contributing
 
