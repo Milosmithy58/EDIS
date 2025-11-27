@@ -69,10 +69,10 @@ const TripPlannerPage = () => {
     }
   }, [savedTrips]);
 
-  const updateSegment = (segmentId: string, next: TripSegment) => {
+  const updateSegment = (segmentId: string, updater: (prev: TripSegment) => TripSegment) => {
     setPlan((prev) => ({
       ...prev,
-      segments: prev.segments.map((segment) => (segment.id === segmentId ? next : segment)),
+      segments: prev.segments.map((segment) => (segment.id === segmentId ? updater(segment) : segment)),
     }));
   };
 
@@ -246,7 +246,7 @@ const TripPlannerPage = () => {
                     segment={segment}
                     index={index}
                     total={plan.segments.length}
-                    onChange={(next) => updateSegment(segment.id, next)}
+                    onChange={(updater) => updateSegment(segment.id, updater)}
                     onRemove={() => removeSegment(segment.id)}
                     onMoveUp={() => moveSegment(segment.id, 'up')}
                     onMoveDown={() => moveSegment(segment.id, 'down')}
