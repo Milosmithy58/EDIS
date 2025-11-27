@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import mapboxgl, { type LngLatBoundsLike, type Map } from 'mapbox-gl';
 import { TripSegment } from '../../types/trip';
-import { useMapboxToken } from '../../lib/useMapboxToken';
+import { useGoogleMapsApi } from '../../lib/useGoogleMapsApi';
 
 type TripPlannerMapProps = {
   tripName: string;
@@ -11,26 +10,21 @@ type TripPlannerMapProps = {
 type StopPoint = {
   id: string;
   name: string;
-  coordinates: [number, number];
+  coordinates: google.maps.LatLngLiteral;
 };
 
-const LINE_SOURCE_ID = 'trip-line';
-const LINE_LAYER_ID = 'trip-line-layer';
+const DEFAULT_VIEW = { center: { lng: -98.5795, lat: 39.8283 }, zoom: 2.5 } as const;
+const LINE_STROKE = '#0ea5e9';
 
-const isValidCoordinate = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value);
-
-const DEFAULT_VIEW: { center: [number, number]; zoom: number } = {
-  center: [-98.5795, 39.8283],
-  zoom: 2.5,
-};
+const isValidCoordinate = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
 
 export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const { token, isLoading, error } = useMapboxToken();
+  const { googleMaps, isLoading, error } = useGoogleMapsApi();
 
   const stops = useMemo<StopPoint[]>(() => {
     const results: StopPoint[] = [];
@@ -45,7 +39,7 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
         return;
       }
       seen.add(id);
-      results.push({ id, name, coordinates: [lng, lat] });
+      results.push({ id, name, coordinates: { lng, lat } });
     };
 
     segments.forEach((segment, index) => {
@@ -65,15 +59,15 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
   }, [segments]);
 
   const lineCoordinates = useMemo(() => {
-    const coords: [number, number][] = [];
+    const coords: google.maps.LatLngLiteral[] = [];
 
     segments.forEach((segment) => {
       const start = segment.startLocation;
       if (isValidCoordinate(start.lat) && isValidCoordinate(start.lng)) {
-        coords.push([start.lng, start.lat]);
+        coords.push({ lng: start.lng, lat: start.lat });
       }
       if (segment.endLocation && isValidCoordinate(segment.endLocation.lat) && isValidCoordinate(segment.endLocation.lng)) {
-        coords.push([segment.endLocation.lng, segment.endLocation.lat]);
+        coords.push({ lng: segment.endLocation.lng, lat: segment.endLocation.lat });
       }
     });
 
@@ -81,104 +75,82 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
   }, [segments]);
 
   useEffect(() => {
-    if (!token || !containerRef.current || mapRef.current) {
+    if (!googleMaps || !containerRef.current || mapRef.current) {
       return;
     }
 
-    mapboxgl.accessToken = token;
-
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+    const map = new googleMaps.maps.Map(containerRef.current, {
       center: DEFAULT_VIEW.center,
       zoom: DEFAULT_VIEW.zoom,
-      attributionControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: true
     });
 
-    const handleLoad = () => setMapReady(true);
-    map.on('load', handleLoad);
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.addControl(new mapboxgl.FullscreenControl(), 'top-right');
-
     mapRef.current = map;
+    setMapReady(true);
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current.forEach((marker) => marker.setMap(null));
       markersRef.current = [];
-      map.off('load', handleLoad);
-      map.remove();
+      polylineRef.current?.setMap(null);
+      polylineRef.current = null;
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [token]);
+  }, [googleMaps]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady) {
+    if (!map || !mapReady || !googleMaps) {
       return;
     }
 
-    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
     stops.forEach((stop) => {
-      const marker = new mapboxgl.Marker({ color: '#0ea5e9' })
-        .setLngLat(stop.coordinates)
-        .setPopup(new mapboxgl.Popup({ offset: 12 }).setHTML(`<strong>${stop.name}</strong>`))
-        .addTo(map);
+      const marker = new googleMaps.maps.Marker({
+        position: stop.coordinates,
+        map,
+        title: stop.name,
+        icon: {
+          path: googleMaps.maps.SymbolPath.CIRCLE,
+          scale: 8,
+          fillColor: LINE_STROKE,
+          fillOpacity: 1,
+          strokeColor: '#0a6fa4',
+          strokeWeight: 2
+        }
+      });
+
+      const info = new googleMaps.maps.InfoWindow({ content: `<strong>${stop.name}</strong>` });
+      marker.addListener('click', () => info.open({ anchor: marker, map }));
       markersRef.current.push(marker);
     });
 
-    const hasLine = map.getSource(LINE_SOURCE_ID);
     if (lineCoordinates.length >= 2) {
-      const geojson = {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: lineCoordinates,
-        },
-      } as GeoJSON.Feature<GeoJSON.LineString>;
-
-      if (hasLine) {
-        const source = map.getSource(LINE_SOURCE_ID) as mapboxgl.GeoJSONSource;
-        source.setData(geojson);
-      } else {
-        map.addSource(LINE_SOURCE_ID, {
-          type: 'geojson',
-          data: geojson,
-        });
-        map.addLayer({
-          id: LINE_LAYER_ID,
-          type: 'line',
-          source: LINE_SOURCE_ID,
-          paint: {
-            'line-color': '#0ea5e9',
-            'line-width': 3,
-            'line-opacity': 0.85,
-          },
+      if (!polylineRef.current) {
+        polylineRef.current = new googleMaps.maps.Polyline({
+          strokeColor: LINE_STROKE,
+          strokeOpacity: 0.85,
+          strokeWeight: 3
         });
       }
-    } else if (hasLine) {
-      map.removeLayer(LINE_LAYER_ID);
-      map.removeSource(LINE_SOURCE_ID);
+      polylineRef.current.setPath(lineCoordinates);
+      polylineRef.current.setMap(map);
+    } else if (polylineRef.current) {
+      polylineRef.current.setMap(null);
     }
 
     if (stops.length > 0) {
-      const bounds = stops.reduce<mapboxgl.LngLatBounds | null>((acc, stop) => {
-        if (!acc) {
-          return new mapboxgl.LngLatBounds(stop.coordinates, stop.coordinates);
-        }
-        return acc.extend(stop.coordinates);
-      }, null);
-
-      if (bounds) {
-        map.fitBounds(bounds as LngLatBoundsLike, { padding: 60, maxZoom: 9, duration: 800 });
-      }
+      const bounds = new googleMaps.maps.LatLngBounds();
+      stops.forEach((stop) => bounds.extend(stop.coordinates));
+      map.fitBounds(bounds, { padding: 60 });
     } else {
-      map.easeTo({ center: DEFAULT_VIEW.center, zoom: DEFAULT_VIEW.zoom, duration: 500 });
+      map.setOptions({ center: DEFAULT_VIEW.center, zoom: DEFAULT_VIEW.zoom });
     }
-  }, [lineCoordinates, mapReady, stops]);
+  }, [lineCoordinates, mapReady, stops, googleMaps]);
 
   if (isLoading) {
     return (
@@ -188,11 +160,11 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
     );
   }
 
-  if (!token || error) {
+  if (!googleMaps || error) {
     return (
       <div className="flex h-full flex-col items-center justify-center rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
         <p className="font-semibold">Map unavailable.</p>
-        <p className="mt-1 text-sm">Set VITE_MAPBOX_TOKEN in your environment to view the trip map.</p>
+        <p className="mt-1 text-sm">Set VITE_GOOGLE_MAPS_API_KEY in your environment to view the trip map.</p>
       </div>
     );
   }

@@ -10,7 +10,7 @@ import FemaIncidentsCard from '../components/fema/FemaIncidentsCard';
 import LocalTicketsCard from '../components/LocalTicketsCard';
 import FilterPanel from '../components/FilterPanel';
 import PlacesPanel from '../components/PlacesPanel';
-import MapboxTabs from '../components/MapboxTabs';
+import MapTabs from '../components/MapTabs';
 import { DEFAULT_FILTERS, FILTER_STORAGE_KEY, normalizeFilters } from '../lib/newsFilters';
 import { resolveUsStateCode } from '../lib/usStates';
 import { useDebounce } from '../lib/useDebounce';
@@ -276,7 +276,7 @@ const Home = ({ adminNav }: HomeProps) => {
               Toggle overlays to explore live traffic, points of interest, and transit context on demand.
             </p>
             <div className="mt-4">
-              <MapboxTabs />
+              <MapTabs />
             </div>
           </section>
         </section>
