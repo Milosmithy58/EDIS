@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { NavLink } from '../lib/navigation';
 import TripSegmentRow from '../components/trip/TripSegmentRow';
 import TripPlannerMap from '../components/trip/TripPlannerMap';
-import { TripPlan, TripSegment, TripSegmentType } from '../types/trip';
+import { SavedTripPlan, TripPlan, TripSegment, TripSegmentType } from '../types/trip';
 
 const STORAGE_KEY = 'edis:trip-planner';
+const SAVED_TRIPS_KEY = 'edis:trip-planner:saved-trips';
+
+const createPlanId = () =>
+  crypto.randomUUID ? crypto.randomUUID() : `trip-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 const defaultPlan: TripPlan = {
-  id: 'trip-plan',
+  id: createPlanId(),
   name: 'New trip',
   segments: [],
 };
@@ -26,6 +30,7 @@ const createEmptySegment = (type: TripSegmentType = 'drive'): TripSegment => ({
 const TripPlannerPage = () => {
   const [plan, setPlan] = useState<TripPlan>(defaultPlan);
   const [draftName, setDraftName] = useState(defaultPlan.name);
+  const [savedTrips, setSavedTrips] = useState<SavedTripPlan[]>([]);
 
   useEffect(() => {
     try {
@@ -35,6 +40,13 @@ const TripPlannerPage = () => {
       if (parsed && parsed.id && Array.isArray(parsed.segments)) {
         setPlan(parsed);
         setDraftName(parsed.name);
+      }
+      const savedRaw = localStorage.getItem(SAVED_TRIPS_KEY);
+      if (savedRaw) {
+        const parsedSaved = JSON.parse(savedRaw) as SavedTripPlan[];
+        if (Array.isArray(parsedSaved)) {
+          setSavedTrips(parsedSaved);
+        }
       }
     } catch (error) {
       console.error('Failed to load saved trip plan', error);
@@ -48,6 +60,14 @@ const TripPlannerPage = () => {
       console.error('Failed to persist trip plan', error);
     }
   }, [draftName, plan]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SAVED_TRIPS_KEY, JSON.stringify(savedTrips));
+    } catch (error) {
+      console.error('Failed to persist saved trips', error);
+    }
+  }, [savedTrips]);
 
   const updateSegment = (segmentId: string, next: TripSegment) => {
     setPlan((prev) => ({
@@ -81,9 +101,40 @@ const TripPlannerPage = () => {
   };
 
   const clearTrip = () => {
-    setPlan(defaultPlan);
-    setDraftName(defaultPlan.name);
+    const freshPlan = { ...defaultPlan, id: createPlanId() };
+    setPlan(freshPlan);
+    setDraftName(freshPlan.name);
     localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const saveTrip = () => {
+    const cleanName = draftName.trim() || 'Untitled trip';
+    const timestamp = new Date().toISOString();
+    const nextPlan: SavedTripPlan = {
+      ...plan,
+      name: cleanName,
+      id: plan.id || createPlanId(),
+      updatedAt: timestamp,
+    };
+
+    setPlan(nextPlan);
+    setDraftName(cleanName);
+    setSavedTrips((prev) => {
+      const existingIndex = prev.findIndex((trip) => trip.id === nextPlan.id);
+      if (existingIndex >= 0) {
+        const copy = [...prev];
+        copy[existingIndex] = nextPlan;
+        return copy;
+      }
+      return [nextPlan, ...prev];
+    });
+  };
+
+  const loadTrip = (id: string) => {
+    const existing = savedTrips.find((trip) => trip.id === id);
+    if (!existing) return;
+    setPlan(existing);
+    setDraftName(existing.name);
   };
 
   const totalStops = useMemo(() => {
@@ -132,6 +183,13 @@ const TripPlannerPage = () => {
               className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-500 dark:border-rose-900 dark:bg-slate-900 dark:text-rose-100 dark:hover:bg-rose-950"
             >
               Clear trip
+            </button>
+            <button
+              type="button"
+              onClick={saveTrip}
+              className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 shadow-sm transition hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100 dark:hover:bg-emerald-900"
+            >
+              Save trip
             </button>
             <button
               type="button"
@@ -207,6 +265,44 @@ const TripPlannerPage = () => {
                 <li className="flex items-center justify-between"><span>Stops</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{totalStops}</span></li>
                 <li className="flex items-center justify-between"><span>Map-ready points</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{coordinateCount}</span></li>
               </ul>
+            </div>
+            <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Saved trips</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Load a previous plan to review or edit it.</p>
+                </div>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{savedTrips.length} saved</span>
+              </div>
+              {savedTrips.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-300">Save a trip to keep it for later review.</p>
+              ) : (
+                <ul className="space-y-3">
+                  {savedTrips.map((saved) => (
+                    <li
+                      key={saved.id}
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    >
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-semibold">{saved.name}</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-300">Updated {new Date(saved.updatedAt).toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => loadTrip(saved.id)}
+                            className="inline-flex items-center gap-2 rounded-md bg-sky-600 px-3 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+                          >
+                            Load trip
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-300">{saved.segments.length} segment(s)</p>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </section>
