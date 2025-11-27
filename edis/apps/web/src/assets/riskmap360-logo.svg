@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="RiskMap360 logo">
+  <defs>
+    <linearGradient id="outerShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d8d6b" />
+      <stop offset="1" stop-color="#0c7a5e" />
+    </linearGradient>
+  </defs>
+  <rect x="36" y="36" width="328" height="328" rx="76" fill="url(#outerShadow)" />
+  <path
+    d="M200 36h88c38.4 0 76 29.7 76 76v88H200Z"
+    fill="#f6a23a"
+  />
+  <path
+    d="M36 200h164v164H112c-46.3 0-76-37.6-76-76Z"
+    fill="#f6a23a"
+  />
+  <rect x="187" y="60" width="26" height="280" rx="10" fill="#f7f3ed" />
+  <rect x="60" y="187" width="280" height="26" rx="10" fill="#f7f3ed" />
+  <path
+    d="M200 104c-48 0-86 37.7-86 84 0 63.4 86 168 86 168s86-104.6 86-168c0-46.3-38-84-86-84Zm0 124c-21.6 0-39-17.4-39-39s17.4-39 39-39 39 17.4 39 39-17.4 39-39 39Z"
+    fill="#f1592a"
+  />
+  <circle cx="200" cy="189" r="26" fill="#fdf8f3" />
+</svg>
