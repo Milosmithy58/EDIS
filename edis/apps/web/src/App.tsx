@@ -3,6 +3,7 @@ import { NavigationProvider, NavLink, useNavigation } from './lib/navigation';
 import Home from './routes/Home';
 import AdminLogin from './routes/AdminLogin';
 import AdminKeys from './routes/AdminKeys';
+import TripPlannerPage from './routes/TripPlannerPage';
 
 const RouterView = () => {
   const { path } = useNavigation();
@@ -23,6 +24,10 @@ const RouterView = () => {
 
   if (path === '/admin-keys') {
     return <AdminKeys />;
+  }
+
+  if (path === '/trip-planner') {
+    return <TripPlannerPage />;
   }
 
   return <Home adminNav={adminNav} />;

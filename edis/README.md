@@ -444,6 +444,11 @@ Try these queries to validate the stack:
 - “London, UK” (UK weather + UK crime + GNews headlines)
 - “New York, US” (US weather + LessCrime crime stats (FBI fallback when configured) + news)
 
+## Trip planner
+
+- The web app now includes a `/trip-planner` page for building multi-stop journeys with Mapbox visualization.
+- Provide a `VITE_MAPBOX_TOKEN` in your environment (or configure the backend token endpoint) to render maps locally.
+
 ## Contributing
 
 - Run `npm run lint` before committing.
