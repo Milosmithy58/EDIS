@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { NavLink } from '../lib/navigation';
 import TripSegmentRow from '../components/trip/TripSegmentRow';
 import TripPlannerMap from '../components/trip/TripPlannerMap';
+import TripDirectionsPanel from '../components/trip/TripDirectionsPanel';
 import { SavedTripPlan, TripPlan, TripSegment, TripSegmentType } from '../types/trip';
 import { createExportFilename, downloadElementAsDocx, downloadElementAsPdf } from '../lib/download';
 
@@ -312,6 +313,9 @@ const TripPlannerPage = () => {
                 <li className="flex items-center justify-between"><span>Stops</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{totalStops}</span></li>
                 <li className="flex items-center justify-between"><span>Map-ready points</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{coordinateCount}</span></li>
               </ul>
+            </div>
+            <div className="mt-4">
+              <TripDirectionsPanel segments={plan.segments} tripName={draftName} />
             </div>
             <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between">
