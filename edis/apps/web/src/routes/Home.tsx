@@ -190,10 +190,8 @@ const Home = ({ adminNav }: HomeProps) => {
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">EDIS</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-300">
-              Emergency Disaster Incident System
-            </p>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">RiskMap360</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-300">360° disaster and risk intelligence</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
