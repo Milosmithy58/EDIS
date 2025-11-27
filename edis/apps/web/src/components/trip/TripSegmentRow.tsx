@@ -6,7 +6,7 @@ type TripSegmentRowProps = {
   segment: TripSegment;
   index: number;
   total: number;
-  onChange: (segment: TripSegment) => void;
+  onChange: (updater: (prev: TripSegment) => TripSegment) => void;
   onRemove: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -44,7 +44,7 @@ export const TripSegmentRow = ({
   });
 
   const updateSegment = (patch: Partial<TripSegment>) => {
-    onChange({ ...segment, ...patch });
+    onChange((prev) => ({ ...prev, ...patch }));
   };
 
   const handleLocationChange = (
@@ -52,23 +52,27 @@ export const TripSegmentRow = ({
     field: 'name' | 'lat' | 'lng',
     value: string,
   ) => {
-    const target = segment[key] ?? { name: '' };
     const nextValue = field === 'name' ? value : value === '' ? undefined : Number(value);
-    updateSegment({
-      [key]: {
-        ...target,
-        [field]: Number.isNaN(nextValue as number) ? undefined : nextValue,
-      },
-    } as Partial<TripSegment>);
+    onChange((prev) => {
+      const target = prev[key] ?? { name: '' };
+      return {
+        ...prev,
+        [key]: {
+          ...target,
+          [field]: Number.isNaN(nextValue as number) ? undefined : nextValue,
+        },
+      } as TripSegment;
+    });
   };
 
   const handleDetailsChange = (field: keyof NonNullable<TripSegment['details']>, value: string) => {
-    updateSegment({
+    onChange((prev) => ({
+      ...prev,
       details: {
-        ...segment.details,
+        ...(prev.details ?? {}),
         [field]: value,
       },
-    });
+    }));
   };
 
   const detailInputs = useMemo(() => {
