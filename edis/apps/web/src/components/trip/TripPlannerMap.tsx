@@ -13,6 +13,12 @@ type StopPoint = {
   coordinates: google.maps.LatLngLiteral;
 };
 
+type PartialStop = {
+  id: string;
+  name: string;
+  coordinates?: google.maps.LatLngLiteral;
+};
+
 const DEFAULT_VIEW = { center: { lng: -98.5795, lat: 39.8283 }, zoom: 2.5 } as const;
 const LINE_STROKE = '#0ea5e9';
 
@@ -24,22 +30,24 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
   const markersRef = useRef<google.maps.Marker[]>([]);
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [geocodedStops, setGeocodedStops] = useState<Record<string, google.maps.LatLngLiteral>>({});
   const { googleMaps, isLoading, error } = useGoogleMapsApi();
 
-  const stops = useMemo<StopPoint[]>(() => {
-    const results: StopPoint[] = [];
+  const stops = useMemo<PartialStop[]>(() => {
+    const results: PartialStop[] = [];
     const seen = new Set<string>();
 
     const pushStop = (name: string, lat?: number, lng?: number, keyPrefix?: string) => {
-      if (!isValidCoordinate(lat) || !isValidCoordinate(lng)) {
+      if (!name && (!isValidCoordinate(lat) || !isValidCoordinate(lng))) {
         return;
       }
-      const id = `${keyPrefix ?? name}-${lat}-${lng}`;
+      const id = keyPrefix ?? `${name}-${lat}-${lng}`;
       if (seen.has(id)) {
         return;
       }
       seen.add(id);
-      results.push({ id, name, coordinates: { lng, lat } });
+      const coordinates = isValidCoordinate(lat) && isValidCoordinate(lng) ? { lng, lat } : undefined;
+      results.push({ id, name: name || 'Unnamed stop', coordinates });
     };
 
     segments.forEach((segment, index) => {
@@ -58,21 +66,94 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
     return results;
   }, [segments]);
 
+  useEffect(() => {
+    if (!googleMaps) {
+      return;
+    }
+
+    const missingStops = stops.filter((stop) => !stop.coordinates && !geocodedStops[stop.id] && stop.name);
+    if (missingStops.length === 0) {
+      return;
+    }
+
+    let isCancelled = false;
+    const geocoder = new googleMaps.maps.Geocoder();
+
+    const geocodeStop = (stop: PartialStop) =>
+      new Promise<{ id: string; coordinates: google.maps.LatLngLiteral } | null>((resolve) => {
+        geocoder.geocode({ address: stop.name }, (results, status) => {
+          if (isCancelled) {
+            resolve(null);
+            return;
+          }
+
+          if (status === 'OK' && results?.[0]?.geometry?.location) {
+            const location = results[0].geometry.location;
+            resolve({ id: stop.id, coordinates: { lat: location.lat(), lng: location.lng() } });
+          } else {
+            resolve(null);
+          }
+        });
+      });
+
+    (async () => {
+      const resolved = await Promise.all(missingStops.map(geocodeStop));
+      if (isCancelled) return;
+
+      const updates = resolved.filter(Boolean) as { id: string; coordinates: google.maps.LatLngLiteral }[];
+      if (updates.length > 0) {
+        setGeocodedStops((prev) => {
+          const next = { ...prev };
+          updates.forEach((update) => {
+            next[update.id] = update.coordinates;
+          });
+          return next;
+        });
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [geocodedStops, googleMaps, stops]);
+
+  const resolvedStops = useMemo<StopPoint[]>(() => {
+    return stops
+      .map((stop) => {
+        const coordinates = stop.coordinates ?? geocodedStops[stop.id];
+        if (!coordinates) return null;
+        return { ...stop, coordinates } as StopPoint;
+      })
+      .filter(Boolean) as StopPoint[];
+  }, [geocodedStops, stops]);
+
   const lineCoordinates = useMemo(() => {
     const coords: google.maps.LatLngLiteral[] = [];
 
     segments.forEach((segment) => {
+      const startId = `${segment.id}-start`;
+      const endId = `${segment.id}-end`;
       const start = segment.startLocation;
-      if (isValidCoordinate(start.lat) && isValidCoordinate(start.lng)) {
-        coords.push({ lng: start.lng, lat: start.lat });
+      const startCoordinates =
+        (isValidCoordinate(start.lat) && isValidCoordinate(start.lng) && { lng: start.lng, lat: start.lat }) || geocodedStops[startId];
+
+      if (startCoordinates) {
+        coords.push(startCoordinates);
       }
-      if (segment.endLocation && isValidCoordinate(segment.endLocation.lat) && isValidCoordinate(segment.endLocation.lng)) {
-        coords.push({ lng: segment.endLocation.lng, lat: segment.endLocation.lat });
+
+      if (segment.endLocation) {
+        const end = segment.endLocation;
+        const endCoordinates =
+          (isValidCoordinate(end.lat) && isValidCoordinate(end.lng) && { lng: end.lng, lat: end.lat }) || geocodedStops[endId];
+
+        if (endCoordinates) {
+          coords.push(endCoordinates);
+        }
       }
     });
 
     return coords;
-  }, [segments]);
+  }, [geocodedStops, segments]);
 
   useEffect(() => {
     if (!googleMaps || !containerRef.current || mapRef.current) {
@@ -109,7 +190,7 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
-    stops.forEach((stop) => {
+    resolvedStops.forEach((stop) => {
       const marker = new googleMaps.maps.Marker({
         position: stop.coordinates,
         map,
@@ -143,14 +224,14 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
       polylineRef.current.setMap(null);
     }
 
-    if (stops.length > 0) {
+    if (resolvedStops.length > 0) {
       const bounds = new googleMaps.maps.LatLngBounds();
-      stops.forEach((stop) => bounds.extend(stop.coordinates));
+      resolvedStops.forEach((stop) => bounds.extend(stop.coordinates));
       map.fitBounds(bounds, { padding: 60 });
     } else {
       map.setOptions({ center: DEFAULT_VIEW.center, zoom: DEFAULT_VIEW.zoom });
     }
-  }, [lineCoordinates, mapReady, stops, googleMaps]);
+  }, [lineCoordinates, mapReady, resolvedStops, googleMaps]);
 
   if (isLoading) {
     return (
