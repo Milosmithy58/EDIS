@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { NavLink } from '../lib/navigation';
 import TripSegmentRow from '../components/trip/TripSegmentRow';
 import TripPlannerMap from '../components/trip/TripPlannerMap';
 import { SavedTripPlan, TripPlan, TripSegment, TripSegmentType } from '../types/trip';
+import { createExportFilename, downloadElementAsDocx, downloadElementAsPdf } from '../lib/download';
 
 const STORAGE_KEY = 'edis:trip-planner';
 const SAVED_TRIPS_KEY = 'edis:trip-planner:saved-trips';
@@ -31,6 +33,8 @@ const TripPlannerPage = () => {
   const [plan, setPlan] = useState<TripPlan>(defaultPlan);
   const [draftName, setDraftName] = useState(defaultPlan.name);
   const [savedTrips, setSavedTrips] = useState<SavedTripPlan[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const pageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     try {
@@ -107,6 +111,30 @@ const TripPlannerPage = () => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
+  const handleDownload = async (format: 'pdf' | 'docx') => {
+    if (!pageRef.current) {
+      toast.error('Unable to export this trip right now.');
+      return;
+    }
+
+    const filename = createExportFilename(draftName || 'trip-plan', 'trip-planner');
+
+    setIsExporting(true);
+    try {
+      if (format === 'pdf') {
+        await downloadElementAsPdf(pageRef.current, filename);
+      } else {
+        await downloadElementAsDocx(pageRef.current, filename);
+      }
+      toast.success(`Download started (${format.toUpperCase()}).`);
+    } catch (error) {
+      console.error('Failed to export trip planner', error);
+      toast.error('Could not generate the download.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const saveTrip = () => {
     const cleanName = draftName.trim() || 'Untitled trip';
     const timestamp = new Date().toISOString();
@@ -160,7 +188,10 @@ const TripPlannerPage = () => {
   }, [plan.segments]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 pb-12 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    <div
+      ref={pageRef}
+      className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-slate-100 pb-12 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+    >
       <header className="border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-5">
           <div className="space-y-1">
@@ -177,6 +208,22 @@ const TripPlannerPage = () => {
             >
               ← Back to dashboard
             </NavLink>
+            <button
+              type="button"
+              onClick={() => handleDownload('pdf')}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Download PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDownload('docx')}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              Download DOCX
+            </button>
             <button
               type="button"
               onClick={clearTrip}
