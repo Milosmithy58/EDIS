@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { TripSegment, TripSegmentType } from '../../types/trip';
+import SegmentMapPreview from './SegmentMapPreview';
 
 type TripSegmentRowProps = {
   segment: TripSegment;
@@ -163,6 +164,19 @@ export const TripSegmentRow = ({
               onChange={(e) => handleDetailsChange('confirmationNumber', e.target.value)}
             />
           </div>
+          <div className="space-y-1">
+            <label className={labelClassName} htmlFor={`hotel-url-${segment.id}`}>
+              Hotel link
+            </label>
+            <input
+              id={`hotel-url-${segment.id}`}
+              type="url"
+              placeholder="https://..."
+              {...sharedProps}
+              value={details.hotelUrl ?? ''}
+              onChange={(e) => handleDetailsChange('hotelUrl', e.target.value)}
+            />
+          </div>
         </div>
       );
     }
@@ -184,6 +198,33 @@ export const TripSegmentRow = ({
   }, [segment.details, segment.id, segment.type]);
 
   const hasBasicErrors = !segment.type || !segment.startLocation.name.trim();
+
+  const startLabel = segment.startLocation.name || 'Starting point';
+  const endLabel = segment.endLocation?.name;
+
+  const skyscannerUrl = useMemo(() => {
+    if (segment.type !== 'flight') return undefined;
+    if (!startLabel || !endLabel) return undefined;
+    const date = segment.startTime ? new Date(segment.startTime).toISOString().slice(0, 10).replace(/-/g, '') : '';
+    const flightQuery = `${startLabel}-${endLabel}${date ? `-${date}` : ''}`;
+    const queryParams = new URLSearchParams({
+      adults: '1',
+      cabinclass: 'economy',
+      legs: `${startLabel}|${endLabel}|${segment.startTime ?? ''}`,
+      preferredairlines: segment.details?.airline ?? '',
+      preferredcabin: 'economy',
+    });
+    return `https://www.skyscanner.com/transport/flights/${encodeURIComponent(flightQuery)}?${queryParams.toString()}`;
+  }, [endLabel, segment.details?.airline, segment.startTime, segment.type, startLabel]);
+
+  const hotelUrl = useMemo(() => {
+    if (segment.type !== 'hotel') return undefined;
+    if (segment.details?.hotelUrl) return segment.details.hotelUrl;
+    if (segment.details?.hotelName) {
+      return `https://www.google.com/maps/search/${encodeURIComponent(segment.details.hotelName)}`;
+    }
+    return undefined;
+  }, [segment.details?.hotelName, segment.details?.hotelUrl, segment.type]);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-200 focus-within:border-sky-300 focus-within:ring-2 focus-within:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-sky-700 dark:focus-within:ring-sky-900/50">
@@ -398,6 +439,38 @@ export const TripSegmentRow = ({
           </div>
         </div>
       ) : null}
+
+      <div className="mt-4 space-y-3">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-100">Segment map & links</p>
+        <SegmentMapPreview segment={segment} />
+        <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-700 dark:text-slate-200">
+          {skyscannerUrl ? (
+            <a
+              href={skyscannerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700 shadow-sm transition hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-100"
+            >
+              Track on Skyscanner
+            </a>
+          ) : null}
+          {hotelUrl ? (
+            <a
+              href={hotelUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-md bg-indigo-50 px-3 py-2 text-indigo-700 shadow-sm transition hover:bg-indigo-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 dark:bg-indigo-900/30 dark:text-indigo-100"
+            >
+              View hotel details
+            </a>
+          ) : null}
+          {!skyscannerUrl && !hotelUrl ? (
+            <span className="rounded-md bg-slate-100 px-3 py-2 text-slate-600 dark:bg-slate-800 dark:text-slate-200">
+              Add details to generate quick links.
+            </span>
+          ) : null}
+        </div>
+      </div>
 
       {hasBasicErrors ? (
         <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:bg-amber-950 dark:text-amber-100">

@@ -13,6 +13,7 @@ export type TripSegmentDetails = {
   trainNumber?: string;
   hotelName?: string;
   confirmationNumber?: string;
+  hotelUrl?: string;
   notes?: string;
 };
 
@@ -31,4 +32,8 @@ export type TripPlan = {
   id: string;
   name: string;
   segments: TripSegment[];
+};
+
+export type SavedTripPlan = TripPlan & {
+  updatedAt: string;
 };
