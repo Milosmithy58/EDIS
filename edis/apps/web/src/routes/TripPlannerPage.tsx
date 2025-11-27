@@ -250,9 +250,13 @@ const TripPlannerPage = () => {
         </div>
       </header>
 
+      <section className="px-4 pt-6">
+        <TripPlannerMap tripName={draftName} segments={plan.segments} />
+      </section>
+
       <main className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6">
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-5">
-          <div className="space-y-4 xl:col-span-3">
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+          <div className="space-y-4 xl:col-span-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 space-y-2">
@@ -304,9 +308,8 @@ const TripPlannerPage = () => {
             </div>
           </div>
 
-          <div className="xl:col-span-2">
-            <TripPlannerMap tripName={draftName} segments={plan.segments} />
-            <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
               <p className="font-semibold text-slate-800 dark:text-slate-100">Trip summary</p>
               <ul className="mt-2 space-y-1 text-sm">
                 <li className="flex items-center justify-between"><span>Segments</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{plan.segments.length}</span></li>
@@ -314,10 +317,10 @@ const TripPlannerPage = () => {
                 <li className="flex items-center justify-between"><span>Map-ready points</span> <span className="font-semibold text-slate-900 dark:text-slate-100">{coordinateCount}</span></li>
               </ul>
             </div>
-            <div className="mt-4">
+            <div>
               <TripDirectionsPanel segments={plan.segments} tripName={draftName} />
             </div>
-            <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Saved trips</p>
