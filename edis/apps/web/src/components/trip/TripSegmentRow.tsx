@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { TripSegment, TripSegmentType } from '../../types/trip';
 import SegmentMapPreview from './SegmentMapPreview';
+import { ParsedPlaceResult, usePlacesAutocomplete } from '../../lib/placesAutocomplete';
+import { useGoogleMapsApi } from '../../lib/useGoogleMapsApi';
 
 type TripSegmentRowProps = {
   segment: TripSegment;
@@ -34,6 +36,9 @@ export const TripSegmentRow = ({
   onMoveDown,
   onMoveUp,
 }: TripSegmentRowProps) => {
+  const { googleMaps } = useGoogleMapsApi();
+  const startInputRef = useRef<HTMLInputElement | null>(null);
+  const endInputRef = useRef<HTMLInputElement | null>(null);
   const [showCoordinates, setShowCoordinates] = useState(() => {
     const hasCoordinates =
       segment.startLocation.lat !== undefined ||
@@ -206,6 +211,46 @@ export const TripSegmentRow = ({
   const startLabel = segment.startLocation.name || 'Starting point';
   const endLabel = segment.endLocation?.name;
 
+  const handlePlaceSelect = useCallback(
+    (key: 'startLocation' | 'endLocation') =>
+      (place: ParsedPlaceResult) => {
+        const lat = place.lat ?? undefined;
+        const lng = place.lng ?? undefined;
+
+        onChange((prev) => {
+          const target = (key === 'startLocation' ? prev.startLocation : prev.endLocation) ?? { name: '' };
+          const nextLocation = {
+            ...target,
+            name: place.description,
+            lat: lat ?? target.lat,
+            lng: lng ?? target.lng,
+          };
+
+          return {
+            ...prev,
+            [key]: nextLocation,
+          } as TripSegment;
+        });
+
+        if (lat !== undefined || lng !== undefined) {
+          setShowCoordinates(true);
+        }
+      },
+    [onChange],
+  );
+
+  usePlacesAutocomplete({
+    googleMaps,
+    inputRef: startInputRef,
+    onPlaceSelect: handlePlaceSelect('startLocation'),
+  });
+
+  usePlacesAutocomplete({
+    googleMaps,
+    inputRef: endInputRef,
+    onPlaceSelect: handlePlaceSelect('endLocation'),
+  });
+
   const skyscannerUrl = useMemo(() => {
     if (segment.type !== 'flight') return undefined;
     if (!startLabel || !endLabel) return undefined;
@@ -297,6 +342,7 @@ export const TripSegmentRow = ({
             type="text"
             required
             className={inputClassName}
+            ref={startInputRef}
             value={segment.startLocation.name}
             onChange={(e) => handleLocationChange('startLocation', 'name', e.target.value)}
           />
@@ -310,6 +356,7 @@ export const TripSegmentRow = ({
             id={`to-${segment.id}`}
             type="text"
             className={inputClassName}
+            ref={endInputRef}
             value={segment.endLocation?.name ?? ''}
             onChange={(e) => handleLocationChange('endLocation', 'name', e.target.value)}
           />
