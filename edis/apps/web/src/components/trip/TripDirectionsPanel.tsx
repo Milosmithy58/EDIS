@@ -23,7 +23,7 @@ export function TripDirectionsPanel({ segments, tripName }: TripDirectionsPanelP
   const [isOpen, setIsOpen] = useState(false);
   const [startId, setStartId] = useState<string>('');
   const [endId, setEndId] = useState<string>('');
-  const [mode, setMode] = useState<google.maps.TravelMode>('DRIVING');
+  const [mode, setMode] = useState<google.maps.TravelMode>(google.maps.TravelMode.DRIVING);
   const [status, setStatus] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 

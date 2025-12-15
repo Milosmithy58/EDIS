@@ -11,7 +11,7 @@ const RESULT_CACHE = new LRUCache<string, { tickets: TicketDTO[]; sourceErrors: 
   ttl: 1000 * 60 * 5
 });
 
-const RESPONSE_CACHE = new LRUCache<string, unknown>({
+const RESPONSE_CACHE = new LRUCache<string, any>({
   max: 400,
   ttl: 1000 * 60 * 5
 });

@@ -18,8 +18,8 @@ const sanitizeString = (value?: string | string[]) => {
 };
 
 router.get('/', async (req: Request, res: Response) => {
-  const lat = parseNumber(req.query.lat);
-  const lon = parseNumber(req.query.lon);
+  const lat = parseNumber(req.query.lat as any);
+  const lon = parseNumber(req.query.lon as any);
   const countryCode = sanitizeString((req.query.countryCode as string) || (req.query.country as string));
   const admin1 = sanitizeString(req.query.admin1 as string);
   const admin2 = sanitizeString(req.query.admin2 as string);

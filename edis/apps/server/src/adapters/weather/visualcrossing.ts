@@ -133,7 +133,7 @@ export const mapToDTO = (
     const maxC = convertTempToC(toNumberOrUndefined(day?.tempmax), unitGroup);
     const minC = convertTempToC(toNumberOrUndefined(day?.tempmin), unitGroup);
     const precipMm = convertPrecipToMm(toNumberOrUndefined(day?.precip), unitGroup);
-    const summary = day?.description || day?.conditions || 'Weather summary unavailable';
+    const summary = String(day?.description || day?.conditions || 'Weather summary unavailable');
     return {
       dateISO,
       maxC,
@@ -160,8 +160,8 @@ export const mapToDTO = (
     current: {
       tempC: convertTempToC(toNumberOrUndefined(current?.temp), unitGroup),
       windKph: convertWindToKph(toNumberOrUndefined(current?.windspeed), unitGroup),
-      conditions: current?.conditions || 'Unknown conditions',
-      icon: current?.icon || undefined
+      conditions: String(current?.conditions || 'Unknown conditions'),
+      icon: current?.icon ? String(current.icon) : undefined
     },
     hourly,
     daily,

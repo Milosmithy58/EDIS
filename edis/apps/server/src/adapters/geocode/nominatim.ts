@@ -3,7 +3,7 @@ import { StandardizedLocation } from '../../types/news';
 
 const BASE_URL = 'https://nominatim.openstreetmap.org';
 const CACHE_TTL = 1000 * 60 * 60 * 24; // 24h
-const cache = new LRUCache<string, StandardizedLocation | null>({ max: 500, ttl: CACHE_TTL });
+const cache = new LRUCache<string, any>({ max: 500, ttl: CACHE_TTL });
 
 let lastRequestAt = 0;
 
@@ -121,7 +121,7 @@ const isLatLonString = (value: string) => {
 export const geocode = async (input: GeocodeInput): Promise<StandardizedLocation | null> => {
   const cacheKey = JSON.stringify(input);
   if (cache.has(cacheKey)) {
-    return cache.get(cacheKey) ?? null;
+    return cache.get(cacheKey) as StandardizedLocation | null ?? null;
   }
 
   let result: StandardizedLocation | null = null;

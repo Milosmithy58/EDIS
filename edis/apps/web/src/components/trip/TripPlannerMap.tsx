@@ -227,7 +227,7 @@ export const TripPlannerMap = ({ segments, tripName }: TripPlannerMapProps) => {
     if (resolvedStops.length > 0) {
       const bounds = new googleMaps.maps.LatLngBounds();
       resolvedStops.forEach((stop) => bounds.extend(stop.coordinates));
-      map.fitBounds(bounds, { padding: 60 });
+      map.fitBounds(bounds, 60);
     } else {
       map.setOptions({ center: DEFAULT_VIEW.center, zoom: DEFAULT_VIEW.zoom });
     }

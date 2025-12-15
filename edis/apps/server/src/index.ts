@@ -82,7 +82,7 @@ app.use((err: Error, req: express.Request, res: express.Response, _next: express
   res.status(500).json({ message: 'Internal server error', status: 500 });
 });
 
-const port = env.PORT;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 4000;
 
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {

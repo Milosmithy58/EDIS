@@ -146,7 +146,7 @@ const FemaIncidentsCard = ({ state, county }: Props) => {
   } = useQuery<DisasterResponse>({
     queryKey: ['fema-disasters', normalizedState, normalizedCounty, sinceIso, typesKey, page],
     enabled: Boolean(normalizedState),
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData,
     queryFn: async () => {
       if (!normalizedState) {
         return { items: [], page: 1, pageSize: 25 };
