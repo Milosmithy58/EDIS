@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useContext, useEffect } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
 import { useAuth } from '../lib/authContext';
 import { appContext } from '../lib/appContext';
 
@@ -7,6 +7,8 @@ const AppLayout = () => {
   const { user, logout } = useAuth();
   const { darkMode, setDarkMode } = useContext(appContext);
   const navigate = useNavigate();
+  const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (darkMode === 'dark') {
@@ -15,6 +17,18 @@ const AppLayout = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownRef]);
 
   const handleLogout = async () => {
     await logout();
@@ -110,18 +124,34 @@ const AppLayout = () => {
               </svg>
             </button>
             {user ? (
-              <div className="flex items-center gap-3 text-sm text-slate-700 dark:text-slate-200">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  {user.role}
-                </span>
-                <span className="font-medium">{user.username}</span>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="rounded-lg border border-slate-300 px-3 py-1 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-300 focus:ring-offset-2 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-offset-slate-900"
+              <div className="relative" ref={dropdownRef}>
+                <div
+                  className="flex cursor-pointer items-center gap-3 text-sm text-slate-700 dark:text-slate-200"
+                  onClick={() => setDropdownOpen(!isDropdownOpen)}
                 >
-                  Log out
-                </button>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    {user.role}
+                  </span>
+                  <span className="font-medium">{user.username}</span>
+                </div>
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-800">
+                    <Link
+                      to="/settings/change-password"
+                      className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                      onClick={() => setDropdownOpen(false)}
+                    >
+                      Change Password
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : null}
           </div>

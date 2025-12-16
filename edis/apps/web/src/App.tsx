@@ -8,6 +8,7 @@ import ProtectedRoute from './routes/ProtectedRoute';
 import AdminRoute from './routes/AdminRoute';
 import LoginPage from './routes/LoginPage';
 import AdminUsersPage from './routes/AdminUsersPage';
+import ChangePasswordPage from './routes/ChangePasswordPage';
 
 const AppRoutes = () => (
   <Routes>
@@ -16,6 +17,7 @@ const AppRoutes = () => (
       <Route element={<AppLayout />}>
         <Route index element={<Home />} />
         <Route path="trip-planner" element={<TripPlannerPage />} />
+        <Route path="settings/change-password" element={<ChangePasswordPage />} />
         <Route element={<AdminRoute />}>
           <Route path="admin-keys" element={<AdminKeys />} />
           <Route path="admin/users" element={<AdminUsersPage />} />

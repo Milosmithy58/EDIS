@@ -4,12 +4,13 @@ import {
   createUser,
   deleteUser,
   findUserByUsername,
+  findUserById,
   listUsers,
   updateUser,
   verifyPassword
 } from '../core/authStore';
 import { env } from '../core/env';
-import { parseUserFromRequest, requireAdmin } from '../core/authMiddleware';
+import { parseUserFromRequest, requireAdmin, requireAuth } from '../core/authMiddleware';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -68,6 +69,35 @@ authRouter.get('/auth/me', (req, res) => {
     return;
   }
   res.json({ username: user.username, role: user.role });
+});
+
+authRouter.patch('/auth/me/password', requireAuth, async (req, res) => {
+  const { oldPassword, newPassword } = (req.body ?? {}) as { oldPassword?: string; newPassword?: string };
+  const userId = req.user!.id;
+
+  if (typeof oldPassword !== 'string' || typeof newPassword !== 'string' || !oldPassword.trim() || !newPassword.trim()) {
+    res.status(400).json(buildError(400, 'AUTH_INVALID_INPUT', 'Old and new passwords are required.'));
+    return;
+  }
+
+  const user = await findUserById(userId);
+  if (!user) {
+    res.status(404).json(buildError(404, 'AUTH_USER_NOT_FOUND', 'User not found.'));
+    return;
+  }
+
+  const valid = await verifyPassword(user, oldPassword);
+  if (!valid) {
+    res.status(401).json(buildError(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid old password.'));
+    return;
+  }
+
+  try {
+    await updateUser(userId, { password: newPassword });
+    res.json({ message: 'Password updated successfully.' });
+  } catch (error) {
+    res.status(500).json(buildError(500, 'AUTH_UPDATE_FAILED', 'Unable to update password.'));
+  }
 });
 
 authRouter.get('/admin/users', requireAdmin, async (_req, res) => {
