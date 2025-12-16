@@ -16,15 +16,18 @@ export const downloadElementAsPdf = async (element: HTMLElement, filename: strin
     throw new Error('Pop-up blocked by the browser');
   }
 
+  const headHtml = document.head.innerHTML; // Get entire head to copy meta, links, styles
   const serialized = element.outerHTML;
+
   printWindow.document.open();
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
-        <meta charset="utf-8" />
+        ${headHtml}
         <title>${filename}</title>
         <style>
+          /* Basic print-specific styles */
           body { margin: 24px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
           * { box-sizing: border-box; }
         </style>
@@ -33,10 +36,13 @@ export const downloadElementAsPdf = async (element: HTMLElement, filename: strin
     </html>
   `);
   printWindow.document.close();
+  
+  await new Promise((resolve) => setTimeout(resolve, 1000)); // Increased timeout to 1 second
+  
   printWindow.focus();
-  await new Promise((resolve) => setTimeout(resolve, 200));
   printWindow.print();
-  setTimeout(() => printWindow.close(), 500);
+  
+  setTimeout(() => printWindow.close(), 1500); // Close window after a slightly longer delay
 };
 
 export const downloadElementAsDocx = async (element: HTMLElement, filename: string) => {
