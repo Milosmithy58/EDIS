@@ -62,9 +62,11 @@ const AdminUsersPage = () => {
 
   const createMutation = useMutation({
     mutationFn: createUser,
-    onSuccess: () => {
+    onSuccess: (newUser) => {
       setFormState({ username: '', password: '', role: 'standard' });
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.setQueryData(['admin-users'], (oldData: AdminUser[] | undefined) => {
+        return oldData ? [newUser, ...oldData] : [newUser];
+      });
       toast.success('User created');
     },
     onError: (error) => toast.error((error as Error).message)
