@@ -16,16 +16,21 @@ export const downloadElementAsPdf = async (element: HTMLElement, filename: strin
     throw new Error('Pop-up blocked by the browser');
   }
 
-  const headHtml = document.head.innerHTML; // Get entire head to copy meta, links, styles
   const serialized = element.outerHTML;
+
+  // Extract only stylesheet links and style blocks from the main document's head
+  const stylesheets = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'))
+    .map(node => node.outerHTML)
+    .join('\n');
 
   printWindow.document.open();
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
-        ${headHtml}
+        <meta charset="utf-8" />
         <title>${filename}</title>
+        ${stylesheets}
         <style>
           /* Basic print-specific styles */
           body { margin: 24px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
@@ -37,12 +42,13 @@ export const downloadElementAsPdf = async (element: HTMLElement, filename: strin
   `);
   printWindow.document.close();
   
-  await new Promise((resolve) => setTimeout(resolve, 1000)); // Increased timeout to 1 second
+  // Longer delay to ensure content and styles are loaded and rendered
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
   
   printWindow.focus();
   printWindow.print();
   
-  setTimeout(() => printWindow.close(), 1500); // Close window after a slightly longer delay
+  setTimeout(() => printWindow.close(), 2500); // Close window after a slightly longer delay
 };
 
 export const downloadElementAsDocx = async (element: HTMLElement, filename: string) => {
