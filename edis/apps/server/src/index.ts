@@ -22,6 +22,7 @@ import { initAuthStore } from './core/authStore';
 const logger = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
 const app = express();
+app.disable('etag');
 
 void initAuthStore();
 
