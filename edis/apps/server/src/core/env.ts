@@ -47,11 +47,23 @@ export const EnvSchema = z
   .object({
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  
+  // Database connection
+  DB_USER: z.string().min(1, 'DB_USER must be set'),
+  DB_PASSWORD: z.string().min(1, 'DB_PASSWORD must be set'),
+  DB_NAME: z.string().min(1, 'DB_NAME must be set'),
+  DB_HOST: z.string().min(1, 'DB_HOST must be set'),
+
+  // Auth
   ADMIN_TOKEN: z.string().min(12, 'ADMIN_TOKEN must be set and at least 12 characters long'),
   AUTH_JWT_SECRET: z.string().min(16, 'AUTH_JWT_SECRET must be set and at least 16 characters long'),
   SECRETBOX_KEY: z.string().min(1, 'SECRETBOX_KEY must be a base64-encoded 32-byte key'),
+  
+  // File paths
   KEYS_STORE_PATH: z.string().default('./secrets/keys.enc'),
   SCRAPE_SOURCES_PATH: z.string().default('./secrets/sources.enc'),
+  
+  // API Keys and Providers
   GEOCODER_PROVIDER: z.enum(['nominatim']).default('nominatim'),
   GNEWS_API_KEY: z.string().optional(),
   NEWSAPI_API_KEY: z.string().optional(),

@@ -31,7 +31,7 @@ authRouter.post('/auth/login', async (req, res) => {
     res.status(401).json(buildError(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid username or password'));
     return;
   }
-  const user = findUserByUsername(username);
+  const user = await findUserByUsername(username);
   if (!user) {
     res.status(401).json(buildError(401, 'AUTH_INVALID_CREDENTIALS', 'Invalid username or password'));
     return;
@@ -45,7 +45,7 @@ authRouter.post('/auth/login', async (req, res) => {
   res.cookie('edis_session', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false,
+    secure: env.NODE_ENV === 'production',
     maxAge: ONE_DAY_MS
   });
   res.json({ username: user.username, role: user.role });
@@ -55,7 +55,7 @@ authRouter.post('/auth/logout', (_req, res) => {
   res.cookie('edis_session', '', {
     httpOnly: true,
     sameSite: 'lax',
-    secure: false,
+    secure: env.NODE_ENV === 'production',
     maxAge: 0
   });
   res.json({ message: 'Logged out' });
@@ -70,9 +70,13 @@ authRouter.get('/auth/me', (req, res) => {
   res.json({ username: user.username, role: user.role });
 });
 
-authRouter.get('/admin/users', requireAdmin, (_req, res) => {
-  const users = listUsers();
-  res.json({ users });
+authRouter.get('/admin/users', requireAdmin, async (_req, res) => {
+  try {
+    const users = await listUsers();
+    res.json({ users });
+  } catch (error) {
+    res.status(500).json(buildError(500, 'AUTH_LIST_FAILED', 'Unable to list users'));
+  }
 });
 
 authRouter.post('/admin/users', requireAdmin, async (req, res) => {
@@ -132,10 +136,10 @@ authRouter.patch('/admin/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
-authRouter.delete('/admin/users/:id', requireAdmin, (req, res) => {
+authRouter.delete('/admin/users/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
-    const removed = deleteUser(Number(id));
+    const removed = await deleteUser(Number(id));
     if (!removed) {
       res.status(404).json(buildError(404, 'AUTH_USER_NOT_FOUND', 'User not found'));
       return;

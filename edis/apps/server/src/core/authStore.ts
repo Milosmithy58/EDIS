@@ -1,7 +1,6 @@
-import { mkdirSync } from 'fs';
-import path from 'path';
-import Database from 'better-sqlite3';
+import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
+import { env } from './env';
 
 export type AuthRole = 'admin' | 'standard';
 
@@ -16,26 +15,20 @@ export type AuthUserRecord = {
 export type SafeUser = Pick<AuthUserRecord, 'id' | 'username' | 'role' | 'createdAt'>;
 
 const TEN_SALT_ROUNDS = 10;
-const DB_PATH = path.resolve(process.cwd(), 'data/auth.db');
 
-let db: Database.Database | null = null;
+let db: Pool | null = null;
 
-const ensureDb = (): Database.Database => {
+const getDb = (): Pool => {
   if (db) {
     return db;
   }
-  mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  db = new Database(DB_PATH);
-  db.pragma('journal_mode = WAL');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      role TEXT NOT NULL CHECK (role IN ('admin', 'standard')),
-      createdAt TEXT NOT NULL
-    );
-  `);
+  db = new Pool({
+    user: env.DB_USER,
+    host: env.DB_HOST,
+    database: env.DB_NAME,
+    password: env.DB_PASSWORD,
+    port: 5432,
+  });
   return db;
 };
 
@@ -46,42 +39,56 @@ const toSafeUser = (user: AuthUserRecord | undefined): SafeUser | null => {
 };
 
 export const initAuthStore = async (): Promise<void> => {
-  const database = ensureDb();
-  const countRow = database.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
-  if (countRow.count > 0) {
+  const database = getDb();
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('admin', 'standard')),
+      "createdAt" TIMESTAMPTZ NOT NULL
+    );
+  `);
+
+  const res = await database.query('SELECT COUNT(*) as count FROM users');
+  if (res.rows[0].count > 0) {
     return;
   }
+
   const createdAt = new Date().toISOString();
   const password_hash = await bcrypt.hash('admin', TEN_SALT_ROUNDS);
-  database
-    .prepare('INSERT INTO users (username, password_hash, role, createdAt) VALUES (@username, @password_hash, @role, @createdAt)')
-    .run({ username: 'admin', password_hash, role: 'admin', createdAt });
-  console.info('Seeded default admin user for local dev: admin / admin');
+  await database.query(
+    'INSERT INTO users (username, password_hash, role, "createdAt") VALUES ($1, $2, $3, $4)',
+    ['admin', password_hash, 'admin', createdAt]
+  );
+  console.info('Seeded default admin user: admin / admin');
 };
 
-export const findUserByUsername = (username: string): AuthUserRecord | null => {
-  const database = ensureDb();
+export const findUserByUsername = async (username: string): Promise<AuthUserRecord | null> => {
+  const database = getDb();
   const normalized = username.trim().toLowerCase();
-  const row = database
-    .prepare('SELECT id, username, password_hash, role, createdAt FROM users WHERE username = ?')
-    .get(normalized) as AuthUserRecord | undefined;
-  return row ?? null;
+  const res = await database.query<AuthUserRecord>(
+    'SELECT id, username, password_hash, role, "createdAt" FROM users WHERE username = $1',
+    [normalized]
+  );
+  return res.rows[0] ?? null;
 };
 
-export const findUserById = (id: number): AuthUserRecord | null => {
-  const database = ensureDb();
-  const row = database
-    .prepare('SELECT id, username, password_hash, role, createdAt FROM users WHERE id = ?')
-    .get(id) as AuthUserRecord | undefined;
-  return row ?? null;
+export const findUserById = async (id: number): Promise<AuthUserRecord | null> => {
+  const database = getDb();
+  const res = await database.query<AuthUserRecord>(
+    'SELECT id, username, password_hash, role, "createdAt" FROM users WHERE id = $1',
+    [id]
+  );
+  return res.rows[0] ?? null;
 };
 
-export const listUsers = (): SafeUser[] => {
-  const database = ensureDb();
-  const rows = database
-    .prepare('SELECT id, username, role, createdAt FROM users ORDER BY createdAt DESC, username ASC')
-    .all() as SafeUser[];
-  return rows.map((user) => ({ ...user, role: user.role as AuthRole }));
+export const listUsers = async (): Promise<SafeUser[]> => {
+  const database = getDb();
+  const res = await database.query<SafeUser>(
+    'SELECT id, username, role, "createdAt" FROM users ORDER BY "createdAt" DESC, username ASC'
+  );
+  return res.rows.map((user) => ({ ...user, role: user.role as AuthRole }));
 };
 
 export const createUser = async (input: {
@@ -89,53 +96,61 @@ export const createUser = async (input: {
   password: string;
   role: AuthRole;
 }): Promise<SafeUser> => {
-  const database = ensureDb();
+  const database = getDb();
   const username = input.username.trim().toLowerCase();
-  const existing = database.prepare('SELECT id FROM users WHERE username = ?').get(username) as { id: number } | undefined;
+  
+  const existing = await findUserByUsername(username);
   if (existing) {
     throw new Error('USERNAME_TAKEN');
   }
+
   const password_hash = await bcrypt.hash(input.password, TEN_SALT_ROUNDS);
   const createdAt = new Date().toISOString();
-  const result = database
-    .prepare('INSERT INTO users (username, password_hash, role, createdAt) VALUES (@username, @password_hash, @role, @createdAt)')
-    .run({ username, password_hash, role: input.role, createdAt });
-  return { id: Number(result.lastInsertRowid), username, role: input.role, createdAt };
+  
+  const res = await database.query<SafeUser>(
+    'INSERT INTO users (username, password_hash, role, "createdAt") VALUES ($1, $2, $3, $4) RETURNING id, username, role, "createdAt"',
+    [username, password_hash, input.role, createdAt]
+  );
+  
+  return res.rows[0];
 };
 
 export const updateUser = async (
   id: number,
   updates: { role?: AuthRole; password?: string }
 ): Promise<SafeUser | null> => {
-  const database = ensureDb();
-  const existing = findUserById(id);
+  const database = getDb();
+  const existing = await findUserById(id);
   if (!existing) return null;
+
   const nextRole = updates.role ?? existing.role;
   let nextPasswordHash = existing.password_hash;
   if (updates.password) {
     nextPasswordHash = await bcrypt.hash(updates.password, TEN_SALT_ROUNDS);
   }
-  database
-    .prepare('UPDATE users SET role = @role, password_hash = @password_hash WHERE id = @id')
-    .run({ id, role: nextRole, password_hash: nextPasswordHash });
-  return toSafeUser({ ...existing, role: nextRole, password_hash: nextPasswordHash });
+
+  const res = await database.query<AuthUserRecord>(
+    'UPDATE users SET role = $1, password_hash = $2 WHERE id = $3 RETURNING *',
+    [nextRole, nextPasswordHash, id]
+  );
+
+  return toSafeUser(res.rows[0]);
 };
 
-export const deleteUser = (id: number): boolean => {
-  const database = ensureDb();
-  const existing = findUserById(id);
+export const deleteUser = async (id: number): Promise<boolean> => {
+  const database = getDb();
+  const existing = await findUserById(id);
   if (!existing) return false;
+
   if (existing.role === 'admin') {
-    const adminCount = database
-      .prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'")
-      .get() as { count: number };
-    if (adminCount.count <= 1) {
-      const error = new Error('LAST_ADMIN');
-      throw error;
+    const res = await database.query("SELECT COUNT(*) as count FROM users WHERE role = 'admin'");
+    if (res.rows[0].count <= 1) {
+      throw new Error('LAST_ADMIN');
     }
   }
-  const result = database.prepare('DELETE FROM users WHERE id = ?').run(id);
-  return result.changes > 0;
+
+  const res = await database.query('DELETE FROM users WHERE id = $1', [id]);
+  return (res.rowCount ?? 0) > 0;
 };
 
 export const verifyPassword = async (user: AuthUserRecord, password: string): Promise<boolean> => {

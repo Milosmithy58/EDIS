@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
 export type AdminUser = { id: number; username: string; role: 'admin' | 'standard'; createdAt: string };
@@ -56,6 +56,7 @@ const deleteUser = async (id: number) => {
 const AdminUsersPage = () => {
   const [formState, setFormState] = useState({ username: '', password: '', role: 'standard' as 'admin' | 'standard' });
   const [resetPassword, setResetPassword] = useState<Record<number, string>>({});
+  const queryClient = useQueryClient();
 
   const usersQuery = useQuery({ queryKey: ['admin-users'], queryFn: fetchUsers });
 
@@ -63,7 +64,7 @@ const AdminUsersPage = () => {
     mutationFn: createUser,
     onSuccess: () => {
       setFormState({ username: '', password: '', role: 'standard' });
-      void usersQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('User created');
     },
     onError: (error) => toast.error((error as Error).message)
@@ -74,7 +75,7 @@ const AdminUsersPage = () => {
       updateUser(id, updates),
     onSuccess: () => {
       setResetPassword({});
-      void usersQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('User updated');
     },
     onError: (error) => toast.error((error as Error).message)
@@ -83,7 +84,7 @@ const AdminUsersPage = () => {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteUser(id),
     onSuccess: () => {
-      void usersQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       toast.success('User removed');
     },
     onError: (error) => toast.error((error as Error).message)
