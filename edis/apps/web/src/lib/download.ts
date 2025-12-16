@@ -14,11 +14,16 @@ const sanitizeFilename = (input: string, fallback: string) => {
 };
 
 export const downloadElementAsPdf = async (element: HTMLElement, filename: string) => {
-  // Capture the content as an image
+  // Try to ensure full content is captured by setting width/height to scroll dimensions
+  const initialWidth = element.scrollWidth;
+  const initialHeight = element.scrollHeight;
+
   const canvas = await html2canvas(element, {
     scale: 2, // Increase scale for better resolution
     useCORS: true, // Handle images from other origins
-    logging: false // Disable html2canvas logs
+    logging: false, // Disable html2canvas logs
+    width: initialWidth,    // Explicitly set width
+    height: initialHeight,  // Explicitly set height
   });
 
   const imgData = canvas.toDataURL('image/png');
@@ -27,9 +32,10 @@ export const downloadElementAsPdf = async (element: HTMLElement, filename: strin
   const imgWidth = 210; // A4 width in mm
   const pageHeight = 295; // A4 height in mm
 
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const aspectRatio = canvas.width / canvas.height;
+  let imgHeight = imgWidth / aspectRatio; // Calculate imgHeight based on aspect ratio
+  
   let heightLeft = imgHeight;
-
   let position = 0;
 
   pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
