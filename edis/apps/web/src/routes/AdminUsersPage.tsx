@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 export type AdminUser = { id: number; username: string; role: 'admin' | 'standard'; createdAt: string };
 
 const fetchUsers = async (): Promise<AdminUser[]> => {
-  const response = await fetch('/api/admin/users', { credentials: 'include' });
+  const response = await fetch('/api/admin/users', { credentials: 'include', cache: 'no-store' });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.message ?? 'Failed to load users');
