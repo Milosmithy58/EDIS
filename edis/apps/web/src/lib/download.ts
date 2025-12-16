@@ -1,3 +1,6 @@
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
+
 export type ExportFormat = 'pdf' | 'docx';
 
 const sanitizeFilename = (input: string, fallback: string) => {
@@ -11,44 +14,35 @@ const sanitizeFilename = (input: string, fallback: string) => {
 };
 
 export const downloadElementAsPdf = async (element: HTMLElement, filename: string) => {
-  const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1000,height=800');
-  if (!printWindow) {
-    throw new Error('Pop-up blocked by the browser');
+  // Capture the content as an image
+  const canvas = await html2canvas(element, {
+    scale: 2, // Increase scale for better resolution
+    useCORS: true, // Handle images from other origins
+    logging: false // Disable html2canvas logs
+  });
+
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p', 'mm', 'a4'); // 'p' for portrait, 'mm' for millimeters, 'a4' for A4 size
+
+  const imgWidth = 210; // A4 width in mm
+  const pageHeight = 295; // A4 height in mm
+
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  let heightLeft = imgHeight;
+
+  let position = 0;
+
+  pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
+
+  while (heightLeft >= 0) {
+    position = heightLeft - imgHeight;
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
   }
 
-  const serialized = element.outerHTML;
-
-  // Extract only stylesheet links and style blocks from the main document's head
-  const stylesheets = Array.from(document.head.querySelectorAll('link[rel="stylesheet"], style'))
-    .map(node => node.outerHTML)
-    .join('\n');
-
-  printWindow.document.open();
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>${filename}</title>
-        ${stylesheets}
-        <style>
-          /* Basic print-specific styles */
-          body { margin: 24px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
-          * { box-sizing: border-box; }
-        </style>
-      </head>
-      <body>${serialized}</body>
-    </html>
-  `);
-  printWindow.document.close();
-  
-  // Longer delay to ensure content and styles are loaded and rendered
-  await new Promise(resolve => setTimeout(resolve, 2000)); // Increased to 2 seconds
-  
-  printWindow.focus();
-  printWindow.print();
-  
-  setTimeout(() => printWindow.close(), 2500); // Close window after a slightly longer delay
+  pdf.save(`${sanitizeFilename(filename, 'edis-export')}.pdf`);
 };
 
 export const downloadElementAsDocx = async (element: HTMLElement, filename: string) => {
